@@ -1,0 +1,118 @@
+<Window x:Class="SmartPdfEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SmartPdfEditor"
+        xmlns:vm="clr-namespace:SmartPdfEditor.ViewModels"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        mc:Ignorable="d"
+        TextElement.Foreground="{DynamicResource AppInkBrush}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        Background="{DynamicResource AppSurfaceBrush}"
+        FontFamily="{DynamicResource AppFontFamily}"
+        Title="{Binding Title}" Height="850" Width="1300"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Assets/AppIcon.ico">
+    
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Toolbar -->
+        <Border Grid.Row="0" Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+            <ToolBarTray>
+                <ToolBar Style="{DynamicResource MaterialDesignToolBar}" ClipToBounds="False" Background="{DynamicResource AppCardBrush}">
+                <Button Command="{Binding OpenPdfCommand}" ToolTip="Open PDF">
+                    <materialDesign:PackIcon Kind="FolderOpen" />
+                </Button>
+                <Separator />
+                <Button Command="{Binding ExitCommand}" ToolTip="Exit">
+                    <materialDesign:PackIcon Kind="ExitToApp" />
+                </Button>
+            </ToolBar>
+            </ToolBarTray>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Tools Sidebar -->
+            <Border Grid.Column="0" Background="{DynamicResource AppSidebarBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,1,0" Padding="18">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,22" VerticalAlignment="Center">
+                        <Grid Width="96" Height="96">
+                            <Border CornerRadius="20">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.35" Color="#0B3A1A" />
+                                </Border.Effect>
+                            </Border>
+                            <Border CornerRadius="20" ClipToBounds="True">
+                                <Image Source="pack://application:,,,/Assets/AppLogo.png" Stretch="UniformToFill" />
+                            </Border>
+                        </Grid>
+                        <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="PDFSmart" FontSize="26" FontWeight="Bold" FontFamily="{DynamicResource AppDisplayFontFamily}" />
+                            <TextBlock Text="Editor" FontSize="18" Foreground="{DynamicResource AppInkMutedBrush}" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="Core Tools" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Foreground="{DynamicResource AppInkBrush}" Margin="0,0,0,12"/>
+                    
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Combine PDFs" Command="{Binding CombinePdfsCommand}"/>
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Split PDF" Command="{Binding SplitPdfCommand}"/>
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Remove Pages" Command="{Binding RemovePagesCommand}"/>
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Extract Pages" Command="{Binding ExtractPagesCommand}"/>
+                    <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Visual Splicing" Margin="0,10,0,6" Command="{Binding OpenVisualSplicingCommand}"/>
+
+                    <TextBlock Text="Edit &amp; Extract" Style="{DynamicResource MaterialDesignSubtitle1TextBlock}" Foreground="{DynamicResource AppInkMutedBrush}" Margin="0,14,0,8"/>
+                    <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Fill Form" Command="{Binding FillFormCommand}"/>
+                    <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Add Text" Command="{Binding AddTextCommand}"/>
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Copy All Text" Command="{Binding CopyTextAsyncCommand}"/>
+                    <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Smart Extract" Command="{Binding SmartExtractCommand}"/>
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Export Images" Command="{Binding ExportImagesCommand}"/>
+                    <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Make Searchable" Command="{Binding MakeSearchableCommand}"/>
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="OCR Sample" Command="{Binding CreateOcrSampleCommand}"/>
+                    
+                    <Separator Margin="0,15"/>
+                    <TextBlock Text="{Binding StatusMessage}" Style="{DynamicResource MaterialDesignCaptionTextBlock}" TextWrapping="Wrap" Foreground="{DynamicResource AppInkMutedBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- PDF Viewer via WebView2 -->
+            <Border Grid.Column="1" Background="{DynamicResource AppCardBrush}" Margin="14" CornerRadius="18" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                <Grid>
+                    <TextBlock Text="Open a PDF to view it here" 
+                               Visibility="{Binding NoPdfLoaded, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Style="{DynamicResource MaterialDesignHeadline5TextBlock}" Foreground="{DynamicResource AppInkMutedBrush}" Opacity="0.8"/>
+                    
+                    <wv2:WebView2 x:Name="PdfWebView" Source="{Binding PdfSource}" 
+                                  Visibility="{Binding HasPdfLoaded, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="2" Padding="12,6" Background="{DynamicResource AppCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1,0,0,0">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AppInkMutedBrush}" />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

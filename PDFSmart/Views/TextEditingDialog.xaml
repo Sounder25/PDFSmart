@@ -1,0 +1,173 @@
+<Window x:Class="SmartPdfEditor.Views.TextEditingDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Add Text to PDF" 
+        Height="700" 
+        Width="1000"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        Background="{DynamicResource AppSurfaceBrush}"
+        TextElement.Foreground="{DynamicResource AppInkBrush}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        FontFamily="{DynamicResource AppFontFamily}">
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="20"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Column: Form -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock Text="Add Text to PDF" 
+                           Style="{DynamicResource MaterialDesignHeadline5TextBlock}"
+                           Margin="0,0,0,5"/>
+                <TextBlock Text="Enter text and click on the preview image to place it." 
+                           TextWrapping="Wrap"
+                           Style="{DynamicResource MaterialDesignBody2TextBlock}"
+                           Opacity="0.7"/>
+            </StackPanel>
+
+            <!-- Form Fields -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Text Content -->
+                    <TextBlock Text="Text Content" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}"
+                               Margin="0,0,0,8"/>
+                    <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                             materialDesign:HintAssist.Hint="Enter text to add"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinLines="3"
+                             MaxLines="5"
+                             Margin="0,0,0,20"
+                             Style="{DynamicResource MaterialDesignOutlinedTextBox}"/>
+
+                    <!-- Page Number -->
+                    <TextBlock Text="Page Number" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}"
+                               Margin="0,0,0,8"/>
+                    <TextBox Text="{Binding PageNumber, UpdateSourceTrigger=PropertyChanged}"
+                             materialDesign:HintAssist.Hint="Page number (1-based)"
+                             Margin="0,0,0,20"
+                             Style="{DynamicResource MaterialDesignOutlinedTextBox}"/>
+
+                    <!-- Position -->
+                    <TextBlock Text="Position (Click on the image to set)" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}"
+                               Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBox Grid.Column="0"
+                                 IsReadOnly="True"
+                                 Text="{Binding XPosition, UpdateSourceTrigger=PropertyChanged}"
+                                 materialDesign:HintAssist.Hint="X (horizontal)"
+                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"/>
+                        
+                        <TextBox Grid.Column="2"
+                                 IsReadOnly="True"
+                                 Text="{Binding YPosition, UpdateSourceTrigger=PropertyChanged}"
+                                 materialDesign:HintAssist.Hint="Y (vertical)"
+                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"/>
+                    </Grid>
+
+                    <!-- Font Family -->
+                    <TextBlock Text="Font Family" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}"
+                               Margin="0,0,0,8"/>
+                    <ComboBox ItemsSource="{Binding AvailableFonts}"
+                              SelectedItem="{Binding SelectedFontFamily}"
+                              Margin="0,0,0,20"
+                              Style="{DynamicResource MaterialDesignOutlinedComboBox}"/>
+
+                    <!-- Font Size -->
+                    <TextBlock Text="Font Size" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}"
+                               Margin="0,0,0,8"/>
+                    <ComboBox ItemsSource="{Binding AvailableFontSizes}"
+                              SelectedItem="{Binding SelectedFontSize}"
+                              Margin="0,0,0,20"
+                              Style="{DynamicResource MaterialDesignOutlinedComboBox}"/>
+
+                    <!-- Color -->
+                    <TextBlock Text="Text Color (Hex)" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}"
+                               Margin="0,0,0,8"/>
+                    <TextBox Text="{Binding ColorHex, UpdateSourceTrigger=PropertyChanged}"
+                             materialDesign:HintAssist.Hint="#000000"
+                             Margin="0,0,0,10"
+                             Style="{DynamicResource MaterialDesignOutlinedTextBox}"/>
+
+                    <!-- Color Preview -->
+                    <Border Height="30" 
+                            CornerRadius="4"
+                            Margin="0,0,0,20">
+                        <Border.Background>
+                            <SolidColorBrush Color="{Binding ColorHex, Converter={StaticResource HexToColorConverter}}"/>
+                        </Border.Background>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="2" 
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Left"
+                        Margin="0,20,0,0">
+                <Button Content="Cancel" 
+                        Command="{Binding CancelCommand}"
+                        Style="{DynamicResource MaterialDesignOutlinedButton}"
+                        Margin="0,0,10,0"
+                        Width="100"/>
+                <Button Content="Add Text" 
+                        Command="{Binding SaveCommand}"
+                        Style="{DynamicResource MaterialDesignRaisedButton}"
+                        Width="100"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Right Column: Interactive Page Preview -->
+        <Border Grid.Column="2" 
+                BorderBrush="{DynamicResource AppBorderBrush}" 
+                BorderThickness="1" 
+                CornerRadius="4" 
+                Background="{DynamicResource AppCardBrush}"
+                Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Click anywhere on the document to place text" HorizontalAlignment="Center" Margin="0,0,0,10" Opacity="0.6"/>
+                
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <Grid>
+                        <!-- To accurately translate clicks, the image should be sized explicitly or Stretch=Uniform. Uniform ensures it doesn't skew and ActualWidth is reliable if we hook to the correct element. -->
+                        <Image Source="{Binding PagePreview}" 
+                               Stretch="Uniform"
+                               Cursor="Cross"
+                               MouseDown="PdfImage_MouseDown" />
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>

@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    
+    <!-- Application Info -->
+    <AssemblyName>PDFSmart</AssemblyName>
+    <Product>PDFSmart</Product>
+    <Company>PDFSmart</Company>
+    <Description>A modern PDF editor with text editing, form filling, and page manipulation capabilities</Description>
+    <Copyright>Copyright © 2026</Copyright>
+    <Version>1.0.0</Version>
+    
+    <!-- Publish Settings -->
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="MaterialDesignThemes" Version="5.3.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3719.77" />
+    <PackageReference Include="PdfiumViewer" Version="2.13.0" />
+    <PackageReference Include="PdfiumViewer.Native.x86_64.v8-xfa" Version="2018.4.8.256" />
+    <PackageReference Include="PdfSharp" Version="6.2.4" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.5" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Resource Include="..\AppLogo.png" Link="Assets\AppLogo.png" />
+    <Resource Include="Assets\AppIcon.ico" />
+    
+    <!-- Include pdfium.dll as content so it is bundled in single-file publishing -->
+    <Content Include="$(OutputPath)pdfium.dll" Condition="Exists('$(OutputPath)pdfium.dll')">
+      <Link>pdfium.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="tessdata\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+  </ItemGroup>
+
+  <!-- Ensure pdfium.dll is in the root during Build -->
+  <Target Name="CopyPdfiumToRootBuild" AfterTargets="Build">
+    <Copy SourceFiles="$(OutputPath)x64\pdfium.dll" DestinationFiles="$(OutputPath)pdfium.dll" SkipUnchangedFiles="true" Condition="Exists('$(OutputPath)x64\pdfium.dll')" />
+  </Target>
+
+  <!-- Specifically for single-file publish, native DLLs like pdfium.dll and tesseract's DLLs 
+       are often not discovered correctly by older wrappers if they are only bundled. 
+       We copy them to the publish root to ensure they are found. -->
+  <Target Name="CopyNativeDllsToPublishRoot" AfterTargets="Publish">
+    <!-- Copy all native DLLs from the OutputPath to the PublishDir root.
+         Many older managed wrappers (PdfiumViewer, Tesseract) assume native DLLs 
+         are alongside the main executable and don't look in the single-file extraction temp folder. -->
+    <ItemGroup>
+      <NativeDlls Include="$(OutputPath)pdfium.dll" />
+      <NativeDlls Include="$(OutputPath)x64\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(NativeDlls)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

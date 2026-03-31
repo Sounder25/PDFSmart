@@ -1,0 +1,199 @@
+<Window x:Class="SmartPdfEditor.Views.VisualSplicingDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SmartPdfEditor.Views"
+        xmlns:vm="clr-namespace:SmartPdfEditor.ViewModels"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        Background="{DynamicResource AppSurfaceBrush}"
+        TextElement.Foreground="{DynamicResource AppInkBrush}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        FontFamily="{DynamicResource AppFontFamily}"
+        Title="Visual PDF Splicer" Height="800" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResizeWithGrip">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="20,20,20,10">
+            <TextBlock Text="Visual Workspace" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" />
+            <TextBlock Text="{Binding StatusMessage}" Opacity="0.7" Margin="0,5,0,0" />
+            <ProgressBar IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,5,0,0" Height="2"/>
+        </StackPanel>
+
+        <ToolBarTray Grid.Row="1" Margin="20,0,20,10">
+            <ToolBar Style="{DynamicResource MaterialDesignToolBar}" ClipToBounds="False">
+                <Button Command="{Binding LoadLibraryFilesAsyncCommand}" ToolTip="Load PDFs into Library">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="AddCircleOutline" />
+                        <TextBlock Text="Load PDFs" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Button>
+                <Separator />
+                <Button Command="{Binding ClearWorkspaceCommand}" ToolTip="Clear Workspace">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="ClearSelection" />
+                        <TextBlock Text="Clear Workspace" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding GenerateSplicedPdfAsyncCommand}" ToolTip="Generate Final PDF" Style="{StaticResource MaterialDesignFlatMidPrimaryButton}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Flash" />
+                        <TextBlock Text="Generate PDF" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Button>
+            </ToolBar>
+        </ToolBarTray>
+
+        <!-- Main Workspace Grid -->
+        <Grid Grid.Row="2" Margin="20,0,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Pane: Library Sidebar -->
+            <materialDesign:Card Grid.Column="0" materialDesign:ElevationAssist.Elevation="Dp2" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Library" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,10"/>
+                    
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding LibraryFiles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Expander Header="{Binding FileName}" IsExpanded="{Binding IsExpanded, Mode=TwoWay}" Margin="0,0,0,5" Background="Transparent">
+                                        <Grid>
+                                            <!-- Library Pages Grid -->
+                                            <ProgressBar IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" Height="2" VerticalAlignment="Top"/>
+                                            <ListBox ItemsSource="{Binding Pages}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" BorderThickness="0" Background="Transparent" Margin="0,5,0,0">
+                                                <ListBox.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel IsItemsHost="True" />
+                                                    </ItemsPanelTemplate>
+                                                </ListBox.ItemsPanel>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="{DynamicResource MaterialDesignCardBackground}" Margin="5" Padding="5" CornerRadius="4">
+                                                            <StackPanel Width="150" Height="220">
+                                                                <Image Source="{Binding Thumbnail}" Stretch="Uniform" Height="180" Margin="0,0,0,5"/>
+                                                                <Grid>
+                                                                    <TextBlock Text="{Binding PageNumber, StringFormat=Pg {0}}" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                                    <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                                                            ToolTip="Add to Workspace"
+                                                                            Width="24" Height="24" Padding="0"
+                                                                            HorizontalAlignment="Right"
+                                                                            Command="{Binding DataContext.AddPageToWorkspaceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <materialDesign:PackIcon Kind="ArrowRight" Width="16" Height="16"/>
+                                                                    </Button>
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
+                                    </Expander>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </materialDesign:Card>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent"/>
+
+            <!-- Right Pane: Visual Workspace -->
+            <materialDesign:Card Grid.Column="2" materialDesign:ElevationAssist.Elevation="Dp2" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Final Sequence" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,10"/>
+
+                    <TextBlock Grid.Row="1" Text="Add pages from the Library here." 
+                               HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5"/>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                         <ListBox ItemsSource="{Binding WorkspacePages}" BorderThickness="0" Background="Transparent">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel IsItemsHost="True" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="10" Padding="5" BorderBrush="{DynamicResource MaterialDesignPrimaryBrush}" BorderThickness="2" CornerRadius="4">
+                                        <StackPanel Width="180" Height="260">
+                                            <Image Source="{Binding Thumbnail}" Stretch="Uniform" Height="200" Margin="0,0,0,5" Cursor="Hand"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <!-- Action Buttons Container -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                                                    <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                                            ToolTip="Move Left" Width="20" Height="20" Padding="0" Margin="0,0,2,0"
+                                                            Command="{Binding DataContext.MoveWorkspacePageLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}">
+                                                        <materialDesign:PackIcon Kind="ArrowLeft" Width="14" Height="14"/>
+                                                    </Button>
+                                                    <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                                            ToolTip="Move Right" Width="20" Height="20" Padding="0"
+                                                            Command="{Binding DataContext.MoveWorkspacePageRightCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}">
+                                                        <materialDesign:PackIcon Kind="ArrowRight" Width="14" Height="14"/>
+                                                    </Button>
+                                                </StackPanel>
+                                                
+                                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding FileName}" FontSize="10" TextTrimming="CharacterEllipsis" MaxWidth="100"/>
+                                                    <TextBlock Text="{Binding PageNumber, StringFormat=Pg {0}}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center"/>
+                                                </StackPanel>
+
+                                                <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" 
+                                                        Foreground="{DynamicResource MaterialDesignValidationErrorBrush}"
+                                                        ToolTip="Remove from Workspace" Width="22" Height="22" Padding="0" HorizontalAlignment="Right"
+                                                        Command="{Binding DataContext.RemovePageFromWorkspaceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}">
+                                                    <materialDesign:PackIcon Kind="Close" Width="14" Height="14"/>
+                                                </Button>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
+                </Grid>
+            </materialDesign:Card>
+        </Grid>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,20,20">
+            <Button Command="{Binding CancelCommand}" Content="Cancel" IsCancel="True" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,10,0"/>
+            <Button Command="{Binding GenerateSplicedPdfAsyncCommand}" Content="Generate" Style="{StaticResource MaterialDesignRaisedButton}"/>
+        </StackPanel>
+    </Grid>
+</Window>
