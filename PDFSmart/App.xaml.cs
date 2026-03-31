@@ -83,7 +83,9 @@ public partial class App : System.Windows.Application
             Directory.CreateDirectory(docPath);
             string logFile = Path.Combine(docPath, "crash.log");
 
-            string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] CRASH: {e.Exception.Message}\n{e.Exception.StackTrace}\n\n";
+            string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] CRASH: {e.Exception.Message}\n" +
+                               $"Type: {e.Exception.GetType().FullName}\n" +
+                               $"{e.Exception}\n\n";
             File.AppendAllText(logFile, logEntry);
 
             MessageBox.Show(

@@ -86,7 +86,10 @@ public partial class MainViewModel : ObservableObject
                 Multiselect = true
             };
 
-            if (openFileDialog.ShowDialog() != true || openFileDialog.FileNames.Length < 2)
+            if (openFileDialog.ShowDialog() != true)
+                return;
+
+            if (openFileDialog.FileNames.Length < 2)
             {
                 MessageBox.Show("Please select at least 2 PDF files to combine.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -404,14 +407,11 @@ public partial class MainViewModel : ObservableObject
 
                     MessageBox.Show($"Text added to PDF and saved to:\n{saveFileDialog.FileName}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                    // Optionally reload the new PDF
+                    // Reload the new PDF
                     var result = MessageBox.Show("Would you like to open the new PDF?", "Open New PDF", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (result == MessageBoxResult.Yes)
                     {
-                        CurrentPdfPath = saveFileDialog.FileName;
-                        Title = $"PDFSmart - {Path.GetFileName(CurrentPdfPath)}";
-                        PdfSource = new Uri(CurrentPdfPath);
-                        StatusMessage = $"Loaded: {Path.GetFileName(CurrentPdfPath)}";
+                        LoadPdf(saveFileDialog.FileName);
                     }
                 }
             }
@@ -688,7 +688,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void LoadPdf(string pdfPath)
+    internal void LoadPdf(string pdfPath)
     {
         CurrentPdfPath = pdfPath;
         Title = $"PDFSmart - {Path.GetFileName(CurrentPdfPath)}";
@@ -772,14 +772,21 @@ public partial class MainViewModel : ObservableObject
         Window inputDialog = new Window
         {
             Title = title,
-            Width = 400,
-            Height = 150,
+            Width = 420,
+            Height = 170,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize
+            ResizeMode = ResizeMode.NoResize,
+            Background = (System.Windows.Media.Brush)Application.Current.FindResource("AppSurfaceBrush")
         };
 
-        StackPanel panel = new StackPanel { Margin = new Thickness(15) };
-        TextBlock label = new TextBlock { Text = prompt, Margin = new Thickness(0, 0, 0, 10) };
+        StackPanel panel = new StackPanel { Margin = new Thickness(18) };
+        TextBlock label = new TextBlock
+        {
+            Text = prompt,
+            Margin = new Thickness(0, 0, 0, 10),
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("AppInkBrush")
+        };
         TextBox textBox = new TextBox { Margin = new Thickness(0, 0, 0, 15) };
         StackPanel buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         Button okButton = new Button { Content = "OK", Width = 75, Margin = new Thickness(0, 0, 10, 0) };

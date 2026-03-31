@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Web.WebView2.Core;
@@ -21,18 +22,34 @@ public partial class MainWindow : Window
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Ensure WebView2 runtime is ready before any navigation occurs.
-        await PdfWebView.EnsureCoreWebView2Async();
+        try
+        {
+            // Ensure WebView2 runtime is ready before any navigation occurs.
+            await PdfWebView.EnsureCoreWebView2Async();
 
-        // Enable right-click context menu so users can Copy selected text.
-        PdfWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
-        PdfWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+            // Enable right-click context menu so users can Copy selected text.
+            PdfWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
+            PdfWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
 
-        PdfWebView.NavigationCompleted += OnPdfNavigationCompleted;
+            PdfWebView.NavigationCompleted += OnPdfNavigationCompleted;
 
-        // If a PDF was already queued (e.g. opened via command-line arg), load it now.
-        if (DataContext is MainViewModel vm && vm.PdfSource is not null)
-            PdfWebView.Source = vm.PdfSource;
+            // If a PDF was already queued (e.g. opened via command-line arg), load it now.
+            if (DataContext is MainViewModel vm && vm.PdfSource is not null)
+                PdfWebView.Source = vm.PdfSource;
+        }
+        catch (Exception ex)
+        {
+            if (DataContext is MainViewModel vm2)
+                vm2.StatusMessage = "PDF preview unavailable — WebView2 runtime not found.";
+
+            MessageBox.Show(
+                "The WebView2 runtime is required for PDF preview but was not found.\n\n" +
+                "PDF editing features will still work, but preview is disabled.\n\n" +
+                $"Details: {ex.Message}",
+                "WebView2 Not Available",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
     }
 
     private async void OnPdfNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
@@ -109,24 +126,7 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainViewModel vm)
             {
-                // Use reflection to call the private LoadPdf method, or make it internal
-                vm.CurrentPdfPath = files[0];
-                vm.Title = $"PDFSmart - {System.IO.Path.GetFileName(files[0])}";
-
-                if (PdfPreviewCompatibility.IsLikelyAdobeDynamicForm(files[0]))
-                {
-                    vm.PdfSource = null;
-                    vm.NoPdfLoaded = true;
-                    vm.HasPdfLoaded = false;
-                    vm.StatusMessage = "Adobe/XFA PDF detected. Preview disabled.";
-                }
-                else
-                {
-                    vm.PdfSource = new Uri(files[0]);
-                    vm.NoPdfLoaded = false;
-                    vm.HasPdfLoaded = true;
-                    vm.StatusMessage = $"Loaded: {System.IO.Path.GetFileName(files[0])}";
-                }
+                vm.LoadPdf(files[0]);
             }
         }
     }
