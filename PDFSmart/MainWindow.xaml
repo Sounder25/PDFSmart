@@ -17,8 +17,19 @@
         FontFamily="{DynamicResource AppFontFamily}"
         Title="{Binding Title}" Height="850" Width="1300"
         WindowStartupLocation="CenterScreen"
-        Icon="pack://application:,,,/Assets/AppIcon.ico">
+        Icon="pack://application:,,,/Assets/AppIcon.ico"
+        AllowDrop="True"
+        Drop="Window_Drop"
+        DragOver="Window_DragOver">
     
+    <Window.InputBindings>
+        <KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenPdfCommand}" />
+        <KeyBinding Key="Q" Modifiers="Ctrl" Command="{Binding ExitCommand}" />
+        <KeyBinding Key="T" Modifiers="Ctrl" Command="{Binding AddTextCommand}" />
+        <KeyBinding Key="C" Modifiers="Ctrl+Shift" Command="{Binding CopyTextCommand}" />
+        <KeyBinding Key="E" Modifiers="Ctrl" Command="{Binding ExportImagesCommand}" />
+    </Window.InputBindings>
+
     <Window.DataContext>
         <vm:MainViewModel />
     </Window.DataContext>
@@ -78,12 +89,13 @@
                     <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Split PDF" Command="{Binding SplitPdfCommand}"/>
                     <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Remove Pages" Command="{Binding RemovePagesCommand}"/>
                     <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Extract Pages" Command="{Binding ExtractPagesCommand}"/>
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Rotate Pages" Command="{Binding RotatePagesCommand}"/>
                     <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Visual Splicing" Margin="0,10,0,6" Command="{Binding OpenVisualSplicingCommand}"/>
 
                     <TextBlock Text="Edit &amp; Extract" Style="{DynamicResource MaterialDesignSubtitle1TextBlock}" Foreground="{DynamicResource AppInkMutedBrush}" Margin="0,14,0,8"/>
                     <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Fill Form" Command="{Binding FillFormCommand}"/>
                     <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Add Text" Command="{Binding AddTextCommand}"/>
-                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Copy All Text" Command="{Binding CopyTextAsyncCommand}"/>
+                    <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Copy All Text" Command="{Binding CopyTextCommand}"/>
                     <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Smart Extract" Command="{Binding SmartExtractCommand}"/>
                     <Button Style="{DynamicResource SidebarButtonStyle}" HorizontalAlignment="Stretch" Content="Export Images" Command="{Binding ExportImagesCommand}"/>
                     <Button Style="{DynamicResource SidebarActionButtonStyle}" HorizontalAlignment="Stretch" Content="Make Searchable" Command="{Binding MakeSearchableCommand}"/>

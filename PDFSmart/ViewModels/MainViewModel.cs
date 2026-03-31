@@ -39,6 +39,7 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(ExportImagesCommand))]
     [NotifyCanExecuteChangedFor(nameof(MakeSearchableCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyTextCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RotatePagesCommand))]
     private bool hasPdfLoaded = false;
 
     public MainViewModel() : this(new PdfSharpService())
@@ -582,6 +583,74 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Error running OCR.";
             MessageBox.Show($"Error: {GetDetailedError(ex)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasPdfLoaded))]
+    private async Task RotatePagesAsync()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(CurrentPdfPath))
+            {
+                MessageBox.Show("Please open a PDF file first.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string? input = ShowInputDialog(
+                "Enter page numbers to rotate (e.g., 1,2,3 or 'all').\nRotation is 90° clockwise:",
+                "Rotate Pages");
+            if (string.IsNullOrWhiteSpace(input))
+                return;
+
+            int pageCount = await _pdfService.GetPageCountAsync(CurrentPdfPath);
+            List<int> pageNumbers;
+
+            if (input.Trim().Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                pageNumbers = Enumerable.Range(1, pageCount).ToList();
+            }
+            else
+            {
+                pageNumbers = input
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => int.TryParse(s.Trim(), out int n) ? n : -1)
+                    .Where(n => n > 0 && n <= pageCount)
+                    .ToList();
+            }
+
+            if (pageNumbers.Count == 0)
+            {
+                MessageBox.Show("No valid page numbers entered.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "PDF Files (*.pdf)|*.pdf",
+                Title = "Save Rotated PDF As",
+                FileName = Path.GetFileNameWithoutExtension(CurrentPdfPath) + "_rotated.pdf"
+            };
+
+            if (saveFileDialog.ShowDialog() != true)
+                return;
+
+            StatusMessage = $"Rotating {pageNumbers.Count} page(s)...";
+            await _pdfService.RotatePagesAsync(CurrentPdfPath, saveFileDialog.FileName, pageNumbers, 90);
+            StatusMessage = "Pages rotated successfully!";
+
+            MessageBox.Show($"Rotated PDF saved to:\n{saveFileDialog.FileName}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            var result = MessageBox.Show("Would you like to open the rotated PDF?", "Open Rotated PDF", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result == MessageBoxResult.Yes)
+            {
+                LoadPdf(saveFileDialog.FileName);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Error rotating pages.";
+            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

@@ -83,4 +83,51 @@ public partial class MainWindow : Window
             // Ignore WebView script failures; they should not crash the app.
         }
     }
+
+    private void Window_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            e.Effects = files?.Length == 1 && files[0].EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                ? DragDropEffects.Copy
+                : DragDropEffects.None;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
+    private void Window_Drop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+
+        var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+        if (files?.Length >= 1 && files[0].EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                // Use reflection to call the private LoadPdf method, or make it internal
+                vm.CurrentPdfPath = files[0];
+                vm.Title = $"PDFSmart - {System.IO.Path.GetFileName(files[0])}";
+
+                if (PdfPreviewCompatibility.IsLikelyAdobeDynamicForm(files[0]))
+                {
+                    vm.PdfSource = null;
+                    vm.NoPdfLoaded = true;
+                    vm.HasPdfLoaded = false;
+                    vm.StatusMessage = "Adobe/XFA PDF detected. Preview disabled.";
+                }
+                else
+                {
+                    vm.PdfSource = new Uri(files[0]);
+                    vm.NoPdfLoaded = false;
+                    vm.HasPdfLoaded = true;
+                    vm.StatusMessage = $"Loaded: {System.IO.Path.GetFileName(files[0])}";
+                }
+            }
+        }
+    }
 }

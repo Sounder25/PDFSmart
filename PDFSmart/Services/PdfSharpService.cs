@@ -443,6 +443,33 @@ public class PdfSharpService : IPdfService
         return result;
     }
 
+    public Task RotatePagesAsync(string inputPath, string outputPath, IEnumerable<int> pageNumbers, int degrees)
+    {
+        return Task.Run(() =>
+        {
+            if (!File.Exists(inputPath))
+                throw new FileNotFoundException($"PDF file not found: {inputPath}");
+
+            if (degrees != 90 && degrees != 180 && degrees != 270)
+                throw new ArgumentException("Degrees must be 90, 180, or 270.");
+
+            var pagesToRotate = new HashSet<int>(pageNumbers);
+
+            using PdfSharp.Pdf.PdfDocument document = PdfReader.Open(inputPath, PdfDocumentOpenMode.Modify);
+
+            foreach (int pageNum in pagesToRotate)
+            {
+                if (pageNum >= 1 && pageNum <= document.PageCount)
+                {
+                    PdfPage page = document.Pages[pageNum - 1];
+                    page.Rotate = (page.Rotate + degrees) % 360;
+                }
+            }
+
+            document.Save(outputPath);
+        });
+    }
+
     public Task<int> GetPageCountAsync(string pdfPath)
     {
         return Task.Run(() =>
