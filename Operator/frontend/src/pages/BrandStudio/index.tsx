@@ -137,7 +137,7 @@ export function BrandStudio() {
           <EditableField label="The Solution (what you bring)" value={brand?.solution_statement} onSave={v => save({ solution_statement: v })} multiline placeholder="How does your tech change the game? What can you do that wasn't possible before?" />
           <EditableField label="Origin Story" value={brand?.origin_story} onSave={v => save({ origin_story: v })} multiline placeholder="How did you get here? What made you become the operator who decided to fight back with tech?" />
           <div className="grid grid-cols-2 gap-5">
-            <EditableField label="Website" value={brand?.website} onSave={v => save({ website: v })} placeholder="https://" />
+            <EditableField label="Website" value={brand?.website} onSave={v => save({ website: v })} placeholder="https://soundersolution.com" />
             <EditableField label="LinkedIn" value={brand?.linkedin} onSave={v => save({ linkedin: v })} placeholder="linkedin.com/in/..." />
           </div>
         </div>

@@ -39,9 +39,9 @@ export function Sidebar() {
             <div className="text-[9px] text-slate-600 uppercase tracking-widest">Mission Marketing</div>
           </div>
         </div>
-        {dash?.brand?.company_name && (
-          <div className="mt-2.5 text-[10px] text-slate-500 truncate">{dash.brand.company_name}</div>
-        )}
+        <div className="mt-2.5 text-[10px] text-slate-500 truncate">
+          {dash?.brand?.company_name || 'Sounder Solution'}
+        </div>
       </div>
 
       {/* Nav */}
@@ -81,7 +81,14 @@ export function Sidebar() {
             {followUpsDue} follow-up{followUpsDue !== 1 ? 's' : ''} due
           </div>
         )}
-        <div className="text-[9px] text-slate-700 uppercase tracking-widest">v1.0 · Built to Win</div>
+        <a
+          href="https://soundersolution.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[9px] text-slate-600 hover:text-brand-400 transition-colors uppercase tracking-widest"
+        >
+          soundersolution.com
+        </a>
       </div>
     </aside>
   )
