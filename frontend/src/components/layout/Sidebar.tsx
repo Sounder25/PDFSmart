@@ -2,13 +2,14 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Search, Target, MessageSquare, Megaphone,
   BarChart3, Settings, ChevronLeft, ChevronRight, Building2,
-  Landmark, User, Handshake, Users, Zap
+  Landmark, User, Handshake, Users, Zap, Radio, MapPin,
+  DollarSign, FileText, Briefcase, FileUp
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/' },
-  { icon: Search, label: 'Market Research', to: '/research' },
+  { icon: Radio, label: 'Market Research & Signals', to: '/research' },
   {
     icon: Target, label: 'Targets & Opportunities', to: '/targets',
     children: [
@@ -17,11 +18,17 @@ const NAV_ITEMS = [
       { icon: User, label: 'Private Clients', to: '/targets?mode=private_client' },
       { icon: Handshake, label: 'Partners', to: '/targets?mode=partner' },
       { icon: Users, label: 'Stakeholders', to: '/targets?mode=stakeholder' },
+      { icon: MapPin, label: 'Counties', to: '/targets?type=county' },
+      { icon: Landmark, label: 'State Agencies', to: '/targets?type=state_agency' },
+      { icon: DollarSign, label: 'Funding', to: '/targets?type=funding_program' },
+      { icon: FileText, label: 'Contracts', to: '/targets?type=procurement_opportunity' },
+      { icon: Briefcase, label: 'Speaking Opps', to: '/targets?type=conference' },
     ]
   },
-  { icon: MessageSquare, label: 'Message Studio', to: '/messages' },
+  { icon: MessageSquare, label: 'Message & Marketing Studio', to: '/messages' },
   { icon: Megaphone, label: 'Campaigns', to: '/campaigns' },
   { icon: BarChart3, label: 'Analytics & Insights', to: '/analytics' },
+  { icon: FileUp, label: 'Business Profile', to: '/business' },
   { icon: Settings, label: 'Settings', to: '/settings' },
 ]
 
@@ -75,9 +82,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     {item.children.map(child => {
                       const CIcon = child.icon
                       const [path, query] = child.to.split('?')
-                      const mode = new URLSearchParams(query).get('mode')
+                      const childParams = new URLSearchParams(query)
+                      const mode = childParams.get('mode')
+                      const type = childParams.get('type')
+                      const currentParams = new URLSearchParams(location.search)
                       const isChildActive = location.pathname === path &&
-                        new URLSearchParams(location.search).get('mode') === mode
+                        (mode ? currentParams.get('mode') === mode : currentParams.get('type') === type)
                       return (
                         <NavLink
                           key={child.to}
@@ -122,7 +132,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Bottom: version */}
       {!collapsed && (
         <div className="px-3 py-2 border-t border-[#243044]">
-          <p className="text-[10px] text-slate-600">ForgeMark AI v1.0 · Phase 1</p>
+          <p className="text-[10px] text-slate-600">ForgeMark AI v2.0 · Agri Intelligence</p>
         </div>
       )}
     </aside>

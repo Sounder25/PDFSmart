@@ -101,6 +101,50 @@ router.get('/', (req, res) => {
   const stale = db.prepare(`SELECT COUNT(*) as cnt FROM target_entities WHERE last_enriched_at < ? AND last_enriched_at IS NOT NULL`).get(staleThreshold).cnt
   if (stale > 0) warnings.push({ type: 'staleness', message: `${stale} targets were last enriched more than 90 days ago.` })
 
+  // Agricultural intelligence section
+  let agriculturalIntelligence = null
+  try {
+    const newSignals = db.prepare(`SELECT COUNT(*) as cnt FROM ecosystem_signals WHERE status = 'new'`).get().cnt
+    const highPrioritySignals = db.prepare(`SELECT COUNT(*) as cnt FROM ecosystem_signals WHERE urgency IN ('high','immediate') AND status NOT IN ('archived')`).get().cnt
+    const signalsWithoutAction = db.prepare(`SELECT COUNT(*) as cnt FROM ecosystem_signals WHERE marketing_implication IS NOT NULL AND status = 'new'`).get().cnt
+    const campaignsFromSignals = db.prepare(`SELECT COUNT(*) as cnt FROM campaigns WHERE origin_type = 'ecosystem_signal'`).get().cnt
+
+    const priorityCounties = db.prepare(`
+      SELECT entity_type, primary_location, COUNT(*) as target_count
+      FROM target_entities
+      WHERE entity_type = 'county' AND status NOT IN ('lost','disqualified','inactive')
+      GROUP BY primary_location ORDER BY target_count DESC LIMIT 5
+    `).all()
+
+    const priorityStateAgencies = db.prepare(`
+      SELECT name, primary_location, status
+      FROM target_entities
+      WHERE entity_type = 'state_agency' AND status NOT IN ('lost','disqualified','inactive')
+      ORDER BY created_at DESC LIMIT 5
+    `).all()
+
+    const fundingOpps = db.prepare(`SELECT COUNT(*) as cnt FROM target_entities WHERE entity_type = 'funding_program' AND status NOT IN ('lost','disqualified','inactive')`).get().cnt
+    const contractOpps = db.prepare(`SELECT COUNT(*) as cnt FROM target_entities WHERE entity_type = 'procurement_opportunity' AND status NOT IN ('lost','disqualified','inactive')`).get().cnt
+
+    const recentSignals = db.prepare(`
+      SELECT * FROM ecosystem_signals WHERE status != 'archived' ORDER BY urgency DESC, created_at DESC LIMIT 5
+    `).all().map(r => ({ ...r, counties: JSON.parse(r.counties_json || '[]') }))
+
+    agriculturalIntelligence = {
+      new_signals: newSignals,
+      high_priority_signals: highPrioritySignals,
+      signals_without_action: signalsWithoutAction,
+      campaigns_from_signals: campaignsFromSignals,
+      priority_counties: priorityCounties,
+      priority_state_agencies: priorityStateAgencies,
+      funding_opportunities: fundingOpps,
+      contract_opportunities: contractOpps,
+      recent_signals: recentSignals,
+    }
+  } catch (_) {
+    // ecosystem_signals table may not exist yet if migration hasn't run
+  }
+
   res.json({
     kpis: {
       total_targets: totalTargets,
@@ -118,6 +162,7 @@ router.get('/', (req, res) => {
     recent_activity: recentActivity,
     recommendations,
     data_quality_warnings: warnings,
+    agricultural_intelligence: agriculturalIntelligence,
   })
 })
 

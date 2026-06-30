@@ -13,6 +13,9 @@ import claimsRouter from './routes/claims.js'
 import dashboardRouter from './routes/dashboard.js'
 import messagesRouter from './routes/messages.js'
 import enrichRouter from './routes/enrich.js'
+import signalsRouter from './routes/signals.js'
+import businessRouter from './routes/business.js'
+import campaignsRouter from './routes/campaigns.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -35,6 +38,9 @@ app.use('/api/claims', claimsRouter)
 app.use('/api/dashboard', dashboardRouter)
 app.use('/api/messages', messagesRouter)
 app.use('/api/enrich', enrichRouter)
+app.use('/api/signals', signalsRouter)
+app.use('/api/business', businessRouter)
+app.use('/api/campaigns', campaignsRouter)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() })

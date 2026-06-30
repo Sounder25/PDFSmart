@@ -14,11 +14,35 @@ import {
   MARKET_MODE_LABELS, ALL_STATUSES, ALL_MARKET_MODES
 } from '@/lib/utils'
 import {
-  Target, Search, Filter, Plus, ChevronUp, ChevronDown,
-  Eye, Trash2, Tag, CheckSquare, Square, Download,
-  RefreshCw, ChevronLeft, ChevronRight, AlertTriangle, MapPin
+  Target, Search, Plus, ChevronUp, ChevronDown,
+  Eye, Trash2, CheckSquare, Square, Download,
+  RefreshCw, ChevronLeft, ChevronRight, AlertTriangle, MapPin, X
 } from 'lucide-react'
 import type { TargetEntity, MarketMode, TargetStatus } from '@/types'
+
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  county: 'Counties',
+  state_agency: 'State Agencies',
+  local_agency: 'Local Agencies',
+  government_program: 'Government Programs',
+  funding_program: 'Funding Programs',
+  procurement_opportunity: 'Contract Opportunities',
+  industry_association: 'Industry Associations',
+  university: 'Universities',
+  extension_office: 'Extension Offices',
+  livestock_organization: 'Livestock Organizations',
+  media_outlet: 'Media Outlets',
+  conference: 'Speaking Opportunities',
+  event_organizer: 'Event Organizers',
+  company: 'Companies',
+  individual: 'Individuals',
+  property: 'Properties',
+  nonprofit: 'Nonprofits',
+  association: 'Associations',
+  prime_contractor: 'Prime Contractors',
+}
+
+const ALL_ENTITY_TYPES = Object.keys(ENTITY_TYPE_LABELS)
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { cn } from '@/lib/utils'
 
@@ -32,6 +56,7 @@ export function TargetsPage() {
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [mode, setMode] = useState<MarketMode | ''>(searchParams.get('mode') as MarketMode || '')
   const [status, setStatus] = useState<TargetStatus | ''>(searchParams.get('status') as TargetStatus || '')
+  const [entityType, setEntityType] = useState(searchParams.get('type') || '')
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState('created_at')
   const [sortDir, setSortDir] = useState<'ASC' | 'DESC'>('DESC')
@@ -42,18 +67,22 @@ export function TargetsPage() {
   const [tagsModal, setTagsModal] = useState(false)
   const [addModal, setAddModal] = useState(false)
 
-  // Sync search param from URL
+  // Sync params from URL when navigation changes (e.g. sidebar clicks)
   useEffect(() => {
     const s = searchParams.get('search')
     const m = searchParams.get('mode')
-    if (s) setSearch(s)
-    if (m) setMode(m as MarketMode)
-  }, [])
+    const t = searchParams.get('type')
+    if (s !== null) setSearch(s)
+    if (m !== null) setMode(m as MarketMode)
+    if (t !== null) setEntityType(t)
+    setPage(1)
+  }, [searchParams])
 
   const params: Record<string, string | number> = { page, limit: PAGE_SIZE, sort_by: sortBy, sort_dir: sortDir }
   if (search) params.search = search
   if (mode) params.market_mode = mode
   if (status) params.status = status
+  if (entityType) params.entity_type = entityType
 
   const { data, isLoading } = useQuery({
     queryKey: ['targets', params],
@@ -116,8 +145,10 @@ export function TargetsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Targets & Opportunities</h1>
-          <p className="text-xs text-slate-500 mt-0.5">{total} total records</p>
+          <h1 className="text-xl font-bold text-slate-100">
+            {entityType ? (ENTITY_TYPE_LABELS[entityType] || 'Targets') : 'Targets & Opportunities'}
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">{total} total records{entityType ? ` · filtered by type` : ''}</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-secondary text-xs" onClick={exportCsv}>
@@ -141,6 +172,15 @@ export function TargetsPage() {
           />
         </div>
 
+        {entityType && (
+          <span className="flex items-center gap-1 text-[10px] bg-teal-900/30 text-teal-300 border border-teal-700/40 px-2 py-1 rounded font-medium">
+            {ENTITY_TYPE_LABELS[entityType] || entityType}
+            <button onClick={() => { setEntityType(''); setSearchParams(p => { p.delete('type'); return p }); setPage(1) }} className="ml-0.5 hover:text-white">
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        )}
+
         <select className="fm-input w-auto py-1.5 text-xs" value={mode} onChange={e => { setMode(e.target.value as MarketMode | ''); setPage(1) }}>
           <option value="">All Modes</option>
           {ALL_MARKET_MODES.map(m => <option key={m} value={m}>{MARKET_MODE_LABELS[m]}</option>)}
@@ -151,8 +191,8 @@ export function TargetsPage() {
           {ALL_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
         </select>
 
-        {(search || mode || status) && (
-          <button className="btn-ghost text-xs text-slate-500" onClick={() => { setSearch(''); setMode(''); setStatus(''); setPage(1) }}>
+        {(search || mode || status || entityType) && (
+          <button className="btn-ghost text-xs text-slate-500" onClick={() => { setSearch(''); setMode(''); setStatus(''); setEntityType(''); setSearchParams(new URLSearchParams()); setPage(1) }}>
             Clear filters
           </button>
         )}
@@ -408,7 +448,18 @@ function AddTargetModal({ open, onClose, onCreated }: { open: boolean; onClose: 
         </div>
         <div><label className="fm-label">Entity Type *</label>
           <select className="fm-input" value={form.entity_type} onChange={e => setForm(f => ({ ...f, entity_type: e.target.value }))}>
-            {['company','government_agency','government_program','individual','property','nonprofit','university','association','prime_contractor','champion'].map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+            <optgroup label="Commercial / Standard">
+              {['company','individual','property','nonprofit','association','prime_contractor','champion'].map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+            </optgroup>
+            <optgroup label="Government & Programs">
+              {['government_agency','government_program','county','state_agency','local_agency','university','extension_office'].map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+            </optgroup>
+            <optgroup label="Funding & Contracts">
+              {['funding_program','procurement_opportunity'].map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+            </optgroup>
+            <optgroup label="Partners & Stakeholders">
+              {['industry_association','livestock_organization','media_outlet','conference','event_organizer'].map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+            </optgroup>
           </select>
         </div>
         <div className="col-span-2"><label className="fm-label">Name *</label>

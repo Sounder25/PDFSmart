@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { cn, formatCurrency, MARKET_MODE_LABELS, MARKET_MODE_COLORS, STATUS_COLORS, STATUS_LABELS } from '@/lib/utils'
-import { BarChart2, TrendingUp, Target, DollarSign, Loader2, PieChart, Activity } from 'lucide-react'
+import { BarChart2, TrendingUp, Target, DollarSign, Loader2, PieChart, Activity, Radio } from 'lucide-react'
 import type { MarketMode, TargetStatus } from '@/types'
 
 function StatCard({ label, value, sub, color = 'text-slate-100' }: { label: string; value: string | number; sub?: string; color?: string }) {
@@ -152,14 +152,61 @@ export function Analytics() {
         )}
       </div>
 
-      {/* Phase 2 note */}
+      {/* Agricultural Intelligence Analytics */}
+      {dash?.agricultural_intelligence && (
+        <div className="fm-card p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Radio className="w-4 h-4 text-orange-400" />
+            <h2 className="text-sm font-semibold text-slate-100">Agricultural Signal Intelligence</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard label="Total Signals Captured" value={(dash.agricultural_intelligence.new_signals ?? 0) + (dash.agricultural_intelligence.high_priority_signals ?? 0)} color="text-orange-400" />
+            <StatCard label="High Priority / Immediate" value={dash.agricultural_intelligence.high_priority_signals ?? 0} color="text-red-400" />
+            <StatCard label="Funding Opportunities" value={dash.agricultural_intelligence.funding_opportunities ?? 0} color="text-green-400" />
+            <StatCard label="Contract Opportunities" value={dash.agricultural_intelligence.contract_opportunities ?? 0} color="text-blue-400" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {(dash.agricultural_intelligence.priority_counties?.length ?? 0) > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Priority Counties</h3>
+                <div className="space-y-1.5">
+                  {dash.agricultural_intelligence.priority_counties.map((c, i) => (
+                    <HBar key={i} label={c.primary_location || 'Unknown'} value={c.target_count} max={Math.max(...dash.agricultural_intelligence!.priority_counties.map((x: { target_count: number }) => x.target_count))} color="bg-blue-500" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(dash.agricultural_intelligence.priority_state_agencies?.length ?? 0) > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Priority State Agencies</h3>
+                <div className="space-y-1.5">
+                  {dash.agricultural_intelligence.priority_state_agencies.map((a: { name: string; status: string }, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <span className="text-slate-400 truncate flex-1">{a.name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${a.status === 'active' ? 'text-green-400 bg-green-900/20' : 'text-slate-500 bg-slate-800/40'}`}>{a.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-[#243044]">
+            <p className="text-[10px] text-slate-500">Signal-to-campaign conversion, signal volume by type, and county development velocity metrics will appear here as you capture and action more signals.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Analytics note */}
       <div className="fm-card p-4 bg-slate-800/20 border-slate-700/30">
         <div className="flex items-start gap-3">
           <BarChart2 className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-medium text-slate-400 mb-0.5">Advanced Analytics — Phase 2</p>
+            <p className="text-xs font-medium text-slate-400 mb-0.5">Advanced Analytics — Coming Soon</p>
             <p className="text-[10px] text-slate-600">
-              Phase 2 will add trend charts over time, conversion funnels by market mode, score distribution histograms, enrichment velocity tracking, and exportable board-ready reports.
+              Upcoming: trend charts over time, signal-to-campaign conversion funnels, county development velocity, funding pipeline value tracking, score distribution histograms, and exportable board-ready reports.
             </p>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { MessageStudio } from '@/pages/MessageStudio'
 import { Campaigns } from '@/pages/Campaigns'
 import { Analytics } from '@/pages/Analytics'
 import { SettingsPage } from '@/pages/Settings'
+import { BusinessProfile } from '@/pages/BusinessProfile'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="messages" element={<MessageStudio />} />
         <Route path="campaigns" element={<Campaigns />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="business" element={<BusinessProfile />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>

@@ -232,5 +232,102 @@ export function initSchema(db) {
       action TEXT NOT NULL CHECK(action IN ('accepted','rejected','skipped')),
       enriched_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS ecosystem_signals (
+      id TEXT PRIMARY KEY,
+      target_entity_id TEXT REFERENCES target_entities(id) ON DELETE SET NULL,
+      topic TEXT NOT NULL,
+      signal_type TEXT NOT NULL,
+      state TEXT,
+      counties_json TEXT NOT NULL DEFAULT '[]',
+      industry TEXT,
+      species TEXT,
+      severity TEXT DEFAULT 'medium' CHECK(severity IN ('low','medium','high','critical')),
+      urgency TEXT DEFAULT 'medium' CHECK(urgency IN ('low','medium','high','immediate')),
+      source TEXT,
+      published_date TEXT,
+      operational_implication TEXT,
+      funding_implication TEXT,
+      contract_implication TEXT,
+      marketing_implication TEXT,
+      status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new','reviewed','actioned','archived')),
+      is_demo INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_signals_state ON ecosystem_signals(state);
+    CREATE INDEX IF NOT EXISTS idx_signals_type ON ecosystem_signals(signal_type);
+    CREATE INDEX IF NOT EXISTS idx_signals_status ON ecosystem_signals(status);
+
+    CREATE TABLE IF NOT EXISTS business_documents (
+      id TEXT PRIMARY KEY,
+      filename TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      file_type TEXT NOT NULL,
+      file_size INTEGER,
+      description TEXT,
+      content_base64 TEXT,
+      extraction_status TEXT NOT NULL DEFAULT 'pending' CHECK(extraction_status IN ('pending','extracted','reviewed','archived')),
+      uploaded_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS document_extractions (
+      id TEXT PRIMARY KEY,
+      document_id TEXT NOT NULL REFERENCES business_documents(id) ON DELETE CASCADE,
+      extraction_type TEXT NOT NULL,
+      extracted_text TEXT NOT NULL,
+      source_page TEXT,
+      source_section TEXT,
+      classification TEXT NOT NULL DEFAULT 'unknown',
+      readiness_status TEXT NOT NULL DEFAULT 'Unknown',
+      marketing_approval INTEGER NOT NULL DEFAULT 0,
+      qualification_required INTEGER NOT NULL DEFAULT 0,
+      allowed_channels_json TEXT NOT NULL DEFAULT '[]',
+      prohibited_contexts_json TEXT NOT NULL DEFAULT '[]',
+      profile_field TEXT,
+      approval_status TEXT NOT NULL DEFAULT 'pending' CHECK(approval_status IN ('pending','approved','rejected')),
+      approved_at TEXT,
+      extracted_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_extractions_doc ON document_extractions(document_id);
+    CREATE INDEX IF NOT EXISTS idx_extractions_status ON document_extractions(approval_status);
+
+    CREATE TABLE IF NOT EXISTS business_profile (
+      id TEXT PRIMARY KEY DEFAULT 'singleton',
+      business_name TEXT,
+      description TEXT,
+      mission TEXT,
+      products_json TEXT NOT NULL DEFAULT '[]',
+      services_json TEXT NOT NULL DEFAULT '[]',
+      capabilities_json TEXT NOT NULL DEFAULT '[]',
+      target_customers_json TEXT NOT NULL DEFAULT '[]',
+      target_industries_json TEXT NOT NULL DEFAULT '[]',
+      geographic_markets_json TEXT NOT NULL DEFAULT '[]',
+      pricing_notes TEXT,
+      differentiators_json TEXT NOT NULL DEFAULT '[]',
+      proof_points_json TEXT NOT NULL DEFAULT '[]',
+      team_qualifications TEXT,
+      procurement_readiness TEXT,
+      funding_readiness TEXT,
+      approved_claims_json TEXT NOT NULL DEFAULT '[]',
+      restricted_claims_json TEXT NOT NULL DEFAULT '[]',
+      calls_to_action_json TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `)
+
+  // Additive column migrations — each wrapped to silently skip if column exists
+  const addColumns = [
+    `ALTER TABLE target_entities ADD COLUMN development_type TEXT`,
+    `ALTER TABLE activities ADD COLUMN agri_type TEXT`,
+    `ALTER TABLE campaigns ADD COLUMN origin_type TEXT`,
+    `ALTER TABLE campaigns ADD COLUMN campaign_type TEXT`,
+    `ALTER TABLE campaigns ADD COLUMN target_entity_id TEXT REFERENCES target_entities(id) ON DELETE SET NULL`,
+    `ALTER TABLE messages ADD COLUMN output_type TEXT`,
+  ]
+  for (const sql of addColumns) {
+    try { db.exec(sql) } catch (_) { /* column already exists */ }
+  }
 }

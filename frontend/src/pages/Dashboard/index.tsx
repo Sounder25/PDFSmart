@@ -9,7 +9,7 @@ import {
   Target, TrendingUp, DollarSign, Send, CheckCircle,
   AlertTriangle, RefreshCw, Zap, ArrowRight, Activity,
   Search, Building2, Landmark, User, Handshake, Users,
-  Info,
+  Info, Radio, MapPin, FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MarketMode } from '@/types'
@@ -76,7 +76,7 @@ export function Dashboard() {
     </div>
   )
 
-  const { kpis, market_distribution, recent_activity, high_priority_targets, needs_enrichment, recommendations, data_quality_warnings, stage_distribution } = data
+  const { kpis, market_distribution, recent_activity, high_priority_targets, needs_enrichment, recommendations, data_quality_warnings, stage_distribution, agricultural_intelligence: agri } = data
   const totalTargets = kpis.total_targets
 
   return (
@@ -121,6 +121,84 @@ export function Dashboard() {
         <KpiCard icon={DollarSign} label="Pipeline Value" value={formatCurrency(kpis.pipeline_value, true)} color="amber" />
         <KpiCard icon={Activity} label="Response Rate" value="—" sub="Track responses to calculate" color="rose" />
       </div>
+
+      {/* Agricultural Intelligence Section */}
+      {agri && (agri.new_signals > 0 || agri.recent_signals.length > 0 || agri.funding_opportunities > 0 || agri.contract_opportunities > 0) && (
+        <div className="fm-card p-4 mb-4 border-orange-700/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Radio className="w-4 h-4 text-orange-400" />
+            <h2 className="text-sm font-semibold text-slate-100">Agricultural Intelligence</h2>
+            <span className="ml-auto text-xs text-slate-500">
+              <button className="text-teal-400 hover:text-teal-300" onClick={() => navigate('/research')}>Open Signals →</button>
+            </span>
+          </div>
+
+          {/* Agri KPIs */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="bg-[#0f172a] rounded-lg p-3 border border-[#243044]">
+              <p className="text-[10px] text-slate-500 mb-1">New Signals</p>
+              <p className={`text-xl font-bold ${agri.new_signals > 0 ? 'text-orange-400' : 'text-slate-400'}`}>{agri.new_signals}</p>
+            </div>
+            <div className="bg-[#0f172a] rounded-lg p-3 border border-[#243044]">
+              <p className="text-[10px] text-slate-500 mb-1">High Priority Signals</p>
+              <p className={`text-xl font-bold ${agri.high_priority_signals > 0 ? 'text-red-400' : 'text-slate-400'}`}>{agri.high_priority_signals}</p>
+            </div>
+            <div className="bg-[#0f172a] rounded-lg p-3 border border-[#243044]">
+              <p className="text-[10px] text-slate-500 mb-1">Funding Opportunities</p>
+              <p className={`text-xl font-bold ${agri.funding_opportunities > 0 ? 'text-green-400' : 'text-slate-400'}`}>{agri.funding_opportunities}</p>
+            </div>
+            <div className="bg-[#0f172a] rounded-lg p-3 border border-[#243044]">
+              <p className="text-[10px] text-slate-500 mb-1">Contract Opportunities</p>
+              <p className={`text-xl font-bold ${agri.contract_opportunities > 0 ? 'text-blue-400' : 'text-slate-400'}`}>{agri.contract_opportunities}</p>
+            </div>
+          </div>
+
+          {/* Recent Signals */}
+          {agri.recent_signals.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">Recent Signals</p>
+              {agri.recent_signals.slice(0, 3).map(sig => (
+                <div key={sig.id} className="flex items-start gap-2 py-1.5 border-b border-[#1e2d42] last:border-0">
+                  <Radio className="w-3 h-3 text-orange-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                      <span className={`text-[10px] font-bold px-1 py-0.5 rounded ${
+                        sig.urgency === 'immediate' ? 'bg-red-900/30 text-red-400' :
+                        sig.urgency === 'high' ? 'bg-orange-900/30 text-orange-400' :
+                        'bg-yellow-900/20 text-yellow-400'
+                      }`}>{sig.urgency}</span>
+                      {sig.state && <span className="text-[10px] text-blue-400">{sig.state}</span>}
+                    </div>
+                    <p className="text-xs text-slate-300 truncate">{sig.topic}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* County & State Agency panels */}
+          {(agri.priority_counties.length > 0 || agri.priority_state_agencies.length > 0) && (
+            <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-[#243044]">
+              {agri.priority_counties.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-2 flex items-center gap-1"><MapPin className="w-3 h-3" />Priority Counties</p>
+                  {agri.priority_counties.map((c, i) => (
+                    <div key={i} className="text-xs text-slate-400 py-0.5">{c.primary_location} <span className="text-slate-600">({c.target_count})</span></div>
+                  ))}
+                </div>
+              )}
+              {agri.priority_state_agencies.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-2 flex items-center gap-1"><FileText className="w-3 h-3" />State Agencies</p>
+                  {agri.priority_state_agencies.map((a, i) => (
+                    <div key={i} className="text-xs text-slate-400 py-0.5 truncate">{a.name}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -15,16 +15,31 @@ import { PrivateClientForm } from './PrivateClientForm'
 import { PartnerForm } from './PartnerForm'
 import { StakeholderForm } from './StakeholderForm'
 import {
-  Search, Save, Trash2, Copy, ChevronDown, RotateCcw, BookOpen
+  Search, Save, Trash2, Copy, ChevronDown, RotateCcw, BookOpen, Radio, Import
 } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Modal } from '@/components/ui/Modal'
+import { EcosystemSignalForm, RESEARCH_TYPE_LABELS } from './EcosystemSignalForm'
+import type { ResearchType } from '@/types'
 
 const MODES: MarketMode[] = ['commercial', 'government', 'private_client', 'partner', 'stakeholder']
+const RESEARCH_TYPES: ResearchType[] = [
+  'target_discovery', 'ecosystem_signal', 'county_development',
+  'state_agency_development', 'funding_opportunity', 'contract_opportunity',
+  'speaking_opportunity', 'industry_partner_opportunity'
+]
+
+const URGENCY_COLORS: Record<string, string> = {
+  immediate: 'text-red-400',
+  high: 'text-orange-400',
+  medium: 'text-yellow-400',
+  low: 'text-slate-400',
+}
 
 export function MarketResearch() {
   const qc = useQueryClient()
   const [mode, setMode] = useState<MarketMode>('commercial')
+  const [researchType, setResearchType] = useState<ResearchType>('target_discovery')
   const [criteria, setCriteria] = useState<Record<string, unknown>>({})
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [results, setResults] = useState<any[]>([])
@@ -35,6 +50,7 @@ export function MarketResearch() {
   const [saveName, setSaveName] = useState('')
   const [renameModal, setRenameModal] = useState<string | null>(null)
   const [renameName, setRenameName] = useState('')
+  const [importingSignals, setImportingSignals] = useState(false)
 
   const { data: profiles = [], isLoading: profilesLoading } = useQuery({
     queryKey: ['research-profiles', mode],
@@ -100,20 +116,48 @@ export function MarketResearch() {
   const runResearch = async () => {
     setResults([])
     setSearching(true)
-    for (const s of STAGES) {
+    const isSignal = researchType === 'ecosystem_signal'
+    const signalStages = [
+      'Scanning USDA and federal agency feeds…',
+      'Checking drought monitor and weather alerts…',
+      'Reviewing NRCS and FSA program announcements…',
+      'Filtering by geography and commodity…',
+      'Assessing funding and contract implications…',
+      'Prioritizing by urgency and severity…',
+      'Preparing signal results…',
+    ]
+    for (const s of (isSignal ? signalStages : STAGES)) {
       setStage(s)
       await new Promise(r => setTimeout(r, 600))
     }
     try {
-      const resp = await api.research.run(mode, criteria, (criteria.desired_count as number) || 5)
+      const resp = await api.research.run(
+        isSignalMode ? 'commercial' : mode, criteria, (criteria.desired_count as number) || 5, researchType
+      )
       setResults(resp.results)
       setDisclaimer(resp.disclaimer)
-      toast.success(`${resp.results.length} demo targets generated`)
+      toast.success(`${resp.results.length} demo ${isSignal ? 'signals' : 'targets'} generated`)
     } catch {
       toast.error('Research failed. Check backend connection.')
     }
     setSearching(false)
     setStage('')
+  }
+
+  const importSignals = async () => {
+    if (!results.length) return
+    setImportingSignals(true)
+    let imported = 0
+    for (const sig of results) {
+      try {
+        await api.signals.create({ ...sig as object, is_demo: true })
+        imported++
+      } catch { /* skip dupes */ }
+    }
+    toast.success(`${imported} signal${imported !== 1 ? 's' : ''} saved`)
+    qc.invalidateQueries({ queryKey: ['signals'] })
+    setImportingSignals(false)
+    setResults([])
   }
 
   const updateField = (field: string, value: unknown) => {
@@ -140,31 +184,61 @@ export function MarketResearch() {
 
   const formProps = { criteria, onUpdate: updateField }
 
+  const isSignalMode = researchType === 'ecosystem_signal'
+
   return (
     <div className="p-6 max-w-[1200px] mx-auto">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Market Research</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Define criteria, discover targets, run demo research workflow</p>
+          <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+            <Radio className="w-5 h-5 text-teal-400" />
+            Market Research & Signals
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">Discover targets, monitor agricultural signals, identify funding and contract opportunities</p>
         </div>
       </div>
 
-      {/* Market Mode Selector */}
-      <div className="fm-card p-1 flex gap-0.5 mb-5 w-fit">
-        {MODES.map(m => (
-          <button
-            key={m}
-            onClick={() => { setMode(m); setCriteria({}); setResults([]) }}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              mode === m
-                ? 'bg-teal-600 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            {MARKET_MODE_LABELS[m]}
-          </button>
-        ))}
+      {/* Research Type Selector */}
+      <div className="mb-4">
+        <label className="text-[10px] text-slate-500 uppercase tracking-widest font-medium block mb-2">Research Type</label>
+        <div className="fm-card p-1 flex flex-wrap gap-0.5 w-fit">
+          {RESEARCH_TYPES.map(rt => (
+            <button
+              key={rt}
+              onClick={() => { setResearchType(rt); setCriteria({}); setResults([]) }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                researchType === rt
+                  ? rt === 'ecosystem_signal'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-teal-600 text-white'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              }`}
+            >
+              {rt === 'ecosystem_signal' && <Radio className="w-3 h-3 inline mr-1" />}
+              {RESEARCH_TYPE_LABELS[rt]}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Market Mode Selector — hidden for ecosystem signal */}
+      {!isSignalMode && (
+        <div className="fm-card p-1 flex gap-0.5 mb-5 w-fit">
+          {MODES.map(m => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setCriteria({}); setResults([]) }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                mode === m
+                  ? 'bg-teal-600 text-white'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              }`}
+            >
+              {MARKET_MODE_LABELS[m]}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Research Form */}
@@ -233,30 +307,75 @@ export function MarketResearch() {
 
           {/* Form */}
           <div className="fm-card p-5">
-            {mode === 'commercial' && <CommercialForm {...formProps} />}
-            {mode === 'government' && <GovernmentForm {...formProps} />}
-            {mode === 'private_client' && <PrivateClientForm {...formProps} />}
-            {mode === 'partner' && <PartnerForm {...formProps} />}
-            {mode === 'stakeholder' && <StakeholderForm {...formProps} />}
+            {isSignalMode
+              ? <EcosystemSignalForm {...formProps} />
+              : <>
+                  {mode === 'commercial' && <CommercialForm {...formProps} />}
+                  {mode === 'government' && <GovernmentForm {...formProps} />}
+                  {mode === 'private_client' && <PrivateClientForm {...formProps} />}
+                  {mode === 'partner' && <PartnerForm {...formProps} />}
+                  {mode === 'stakeholder' && <StakeholderForm {...formProps} />}
+                </>
+            }
           </div>
 
           {/* Run button */}
           <div className="flex justify-end gap-3">
             <button
-              className="btn-primary text-sm px-6 py-2.5"
+              className={`btn-primary text-sm px-6 py-2.5 ${isSignalMode ? 'bg-orange-600 hover:bg-orange-700 border-orange-600' : ''}`}
               onClick={runResearch}
               disabled={searching}
             >
               {searching ? (
                 <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{stage}</>
+              ) : isSignalMode ? (
+                <><Radio className="w-4 h-4" />Scan for Signals</>
               ) : (
                 <><Search className="w-4 h-4" />Run Demo Research</>
               )}
             </button>
           </div>
 
-          {/* Results */}
-          {results.length > 0 && (
+          {/* Signal Results */}
+          {isSignalMode && results.length > 0 && (
+            <div className="fm-card p-4 space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-slate-200">Signal Results ({results.length})</h3>
+                <button
+                  className="btn-primary text-xs py-1.5 px-3"
+                  onClick={importSignals}
+                  disabled={importingSignals}
+                >
+                  <Import className="w-3 h-3" />
+                  {importingSignals ? 'Saving…' : 'Save All Signals'}
+                </button>
+              </div>
+              <p className="text-[10px] text-amber-400/80 bg-amber-900/10 border border-amber-700/20 rounded px-2 py-1">{disclaimer}</p>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {results.map((sig: any, i: number) => (
+                <div key={i} className="border border-[#334155] rounded-lg p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      sig.urgency === 'immediate' ? 'text-red-400 bg-red-900/20 border-red-700/30' :
+                      sig.urgency === 'high' ? 'text-orange-400 bg-orange-900/20 border-orange-700/30' :
+                      sig.urgency === 'medium' ? 'text-yellow-400 bg-yellow-900/20 border-yellow-700/30' :
+                      'text-slate-400 bg-slate-800/40 border-slate-700/30'
+                    }`}>{(sig.urgency || 'medium').toUpperCase()}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded border border-[#334155] text-slate-400 capitalize">{(sig.signal_type || '').replace(/_/g, ' ')}</span>
+                    {sig.state && <span className="text-[10px] px-2 py-0.5 rounded border border-[#334155] text-blue-400">{sig.state}</span>}
+                  </div>
+                  <p className="text-sm font-medium text-slate-200">{sig.topic}</p>
+                  {sig.funding_implication && <p className="text-xs text-green-400/80"><span className="font-medium">Funding:</span> {sig.funding_implication}</p>}
+                  {sig.contract_implication && <p className="text-xs text-blue-400/80"><span className="font-medium">Contract:</span> {sig.contract_implication}</p>}
+                  {sig.marketing_implication && <p className="text-xs text-purple-400/80"><span className="font-medium">Marketing:</span> {sig.marketing_implication}</p>}
+                  {sig.operational_implication && <p className="text-xs text-slate-400"><span className="font-medium">Operational:</span> {sig.operational_implication}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Target Results (non-signal) */}
+          {!isSignalMode && results.length > 0 && (
             <ResearchResults results={results} disclaimer={disclaimer} marketMode={mode} />
           )}
         </div>

@@ -62,7 +62,7 @@ export function MessageStudio() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Message Studio</h1>
+          <h1 className="text-xl font-bold text-slate-100">Message & Marketing Studio</h1>
           <p className="text-xs text-slate-500 mt-1">Draft, review, and manage outreach messages across all market modes</p>
         </div>
         <div className="flex items-center gap-2">

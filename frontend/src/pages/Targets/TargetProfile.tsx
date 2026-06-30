@@ -184,7 +184,7 @@ function AddOpportunityModal({ targetId, onClose, onSaved }: { targetId: string;
   )
 }
 
-// ---- Enrich Modal ----
+// ---- Refresh Intelligence Modal ----
 function EnrichModal({ targetId, onClose, onDone }: { targetId: string; onClose: () => void; onDone: () => void }) {
   const [phase, setPhase] = useState<'analyze' | 'propose' | 'review' | 'done'>('analyze')
   const [analysis, setAnalysis] = useState<{ missing_fields: {field:string;label:string}[]; stale_fields: {field:string;label:string;current:string}[]; low_confidence_fields: {field:string;label:string;current:string}[] } | null>(null)
@@ -235,7 +235,7 @@ function EnrichModal({ targetId, onClose, onDone }: { targetId: string; onClose:
         <div className="flex items-center justify-between p-4 border-b border-slate-700/40">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-teal-400" />
-            <h2 className="text-sm font-semibold text-slate-100">Enrich Target</h2>
+            <h2 className="text-sm font-semibold text-slate-100">Refresh Intelligence</h2>
           </div>
           <button onClick={onClose} className="btn-ghost p-1"><X className="w-4 h-4" /></button>
         </div>
@@ -312,7 +312,7 @@ function EnrichModal({ targetId, onClose, onDone }: { targetId: string; onClose:
           {phase === 'done' && (
             <div className="text-center py-6 space-y-2">
               <CheckCircle className="w-8 h-8 text-teal-400 mx-auto" />
-              <p className="text-sm font-medium text-slate-200">Enrichment Complete</p>
+              <p className="text-sm font-medium text-slate-200">Intelligence Refresh Complete</p>
               <p className="text-xs text-slate-400">Target data has been updated. Review the changes in the Overview tab.</p>
             </div>
           )}
@@ -658,7 +658,7 @@ export function TargetProfile() {
           <Briefcase className="w-3.5 h-3.5" />Add Opportunity
         </button>
         <button className="btn-primary text-xs" onClick={() => setShowEnrich(true)}>
-          <Zap className="w-3.5 h-3.5" />Enrich
+          <RefreshCw className="w-3.5 h-3.5" />Refresh Intelligence
         </button>
         <button className="btn-secondary text-xs" onClick={() => setShowMessage(true)}>
           <MessageSquare className="w-3.5 h-3.5" />Generate Message
@@ -813,6 +813,84 @@ export function TargetProfile() {
                   </div>
                 )}
               </div>
+
+              {/* Type-specific intelligence panel — full width below grid */}
+              {['county', 'local_agency'].includes(target.entity_type) && (
+                <div className="col-span-2 fm-card p-4 border-blue-700/20">
+                  <h3 className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5" />County Development Profile
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    {[
+                      { label: 'Development Type', value: (target as TargetEntity & { development_type?: string }).development_type },
+                      { label: 'NAICS Code', value: target.naics_code },
+                      { label: 'Service Area', value: target.service_area },
+                    ].filter(d => d.value).map(d => (
+                      <div key={d.label}><span className="text-slate-500 block">{d.label}</span><span className="text-slate-200">{d.value}</span></div>
+                    ))}
+                  </div>
+                  {target.description && <p className="text-xs text-slate-400 mt-3 border-t border-[#243044] pt-3">{target.description}</p>}
+                </div>
+              )}
+
+              {['state_agency', 'government_program'].includes(target.entity_type) && (
+                <div className="col-span-2 fm-card p-4 border-green-700/20">
+                  <h3 className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5" />State Agency Profile
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    {[
+                      { label: 'Development Type', value: (target as TargetEntity & { development_type?: string }).development_type },
+                      { label: 'Acquisition Path', value: target.acquisition_path },
+                      { label: 'Set-Aside Type', value: target.set_aside_type },
+                      { label: 'PSC Code', value: target.psc_code },
+                      { label: 'Fiscal Year', value: target.fiscal_year },
+                      { label: 'Opportunity Type', value: target.opportunity_type },
+                    ].filter(d => d.value).map(d => (
+                      <div key={d.label}><span className="text-slate-500 block">{d.label}</span><span className="text-slate-200">{d.value}</span></div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {['funding_program'].includes(target.entity_type) && (
+                <div className="col-span-2 fm-card p-4 border-emerald-700/20">
+                  <h3 className="text-xs font-semibold text-emerald-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <DollarSign className="w-3.5 h-3.5" />Funding Profile
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    {[
+                      { label: 'Development Type', value: (target as TargetEntity & { development_type?: string }).development_type },
+                      { label: 'Opportunity Type', value: target.opportunity_type },
+                      { label: 'Fiscal Year', value: target.fiscal_year },
+                      { label: 'Acquisition Path', value: target.acquisition_path },
+                      { label: 'NAICS Code', value: target.naics_code },
+                    ].filter(d => d.value).map(d => (
+                      <div key={d.label}><span className="text-slate-500 block">{d.label}</span><span className="text-slate-200">{d.value}</span></div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {['procurement_opportunity'].includes(target.entity_type) && (
+                <div className="col-span-2 fm-card p-4 border-purple-700/20">
+                  <h3 className="text-xs font-semibold text-purple-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <Briefcase className="w-3.5 h-3.5" />Contract Profile
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    {[
+                      { label: 'Development Type', value: (target as TargetEntity & { development_type?: string }).development_type },
+                      { label: 'Opportunity Type', value: target.opportunity_type },
+                      { label: 'Acquisition Path', value: target.acquisition_path },
+                      { label: 'Set-Aside Type', value: target.set_aside_type },
+                      { label: 'PSC Code', value: target.psc_code },
+                      { label: 'Fiscal Year', value: target.fiscal_year },
+                    ].filter(d => d.value).map(d => (
+                      <div key={d.label}><span className="text-slate-500 block">{d.label}</span><span className="text-slate-200">{d.value}</span></div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -95,10 +95,10 @@ export const api = {
       save: (marketMode: string, criteria: Record<string, unknown>) =>
         request(`/research/draft`, { method: 'PUT', body: JSON.stringify({ market_mode: marketMode, criteria }) }),
     },
-    run: (marketMode: string, criteria: Record<string, unknown>, desiredCount?: number) =>
-      request<{ results: unknown[]; disclaimer: string }>(`/research/run`, {
+    run: (marketMode: string, criteria: Record<string, unknown>, desiredCount?: number, researchType?: string) =>
+      request<{ results: unknown[]; disclaimer: string; research_type?: string }>(`/research/run`, {
         method: 'POST',
-        body: JSON.stringify({ market_mode: marketMode, criteria, desired_count: desiredCount }),
+        body: JSON.stringify({ market_mode: marketMode, criteria, desired_count: desiredCount, research_type: researchType }),
       }),
     import: (results: unknown[]) =>
       request<{ imported: number; duplicates: number }>(`/research/import`, { method: 'POST', body: JSON.stringify({ results }) }),
@@ -136,12 +136,59 @@ export const api = {
       }),
   },
 
-  // Enrich
+  // Enrich (Refresh Intelligence)
   enrich: {
     analyze: (targetId: string) => request(`/enrich/analyze/${targetId}`),
     propose: (targetId: string) => request(`/enrich/propose/${targetId}`, { method: 'POST' }),
     accept: (targetId: string, data: { accepted: unknown[]; rejected: unknown[]; claim_proposals: unknown[] }) =>
       request(`/enrich/accept/${targetId}`, { method: 'POST', body: JSON.stringify(data) }),
     history: (targetId: string) => request(`/enrich/history/${targetId}`),
+  },
+
+  // Ecosystem Signals
+  signals: {
+    list: (params?: Record<string, string | number>) => {
+      const qs = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : ''
+      return request<import('../types').PaginatedResponse<import('../types').EcosystemSignal>>(`/signals${qs}`)
+    },
+    get: (id: string) => request<import('../types').EcosystemSignal>(`/signals/${id}`),
+    create: (data: Partial<import('../types').EcosystemSignal>) =>
+      request<import('../types').EcosystemSignal>(`/signals`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<import('../types').EcosystemSignal>) =>
+      request<import('../types').EcosystemSignal>(`/signals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request(`/signals/${id}`, { method: 'DELETE' }),
+    seedDemo: () => request(`/signals/seed/demo`, { method: 'POST' }),
+    metaTypes: () => request<{ signal_types: string[] }>(`/signals/meta/types`),
+  },
+
+  // Business Profile & Document Intake
+  business: {
+    profile: {
+      get: () => request<import('../types').BusinessProfile>(`/business/profile`),
+      update: (data: Partial<import('../types').BusinessProfile>) =>
+        request<import('../types').BusinessProfile>(`/business/profile`, { method: 'PUT', body: JSON.stringify(data) }),
+    },
+    documents: {
+      list: () => request<import('../types').BusinessDocument[]>(`/business/documents`),
+      upload: (data: { original_name: string; file_type: string; file_size?: number; description?: string; content_base64: string }) =>
+        request<import('../types').BusinessDocument>(`/business/documents`, { method: 'POST', body: JSON.stringify(data) }),
+      delete: (id: string) => request(`/business/documents/${id}`, { method: 'DELETE' }),
+    },
+    extractions: {
+      list: (docId: string) => request<import('../types').DocumentExtraction[]>(`/business/documents/${docId}/extractions`),
+      create: (docId: string, data: Partial<import('../types').DocumentExtraction>) =>
+        request<import('../types').DocumentExtraction>(`/business/documents/${docId}/extractions`, { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: Partial<import('../types').DocumentExtraction>) =>
+        request<import('../types').DocumentExtraction>(`/business/extractions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      delete: (id: string) => request(`/business/extractions/${id}`, { method: 'DELETE' }),
+      pending: () => request<import('../types').DocumentExtraction[]>(`/business/extractions/pending`),
+      bulkApprove: (ids: string[], action: 'approved' | 'rejected') =>
+        request(`/business/extractions/bulk-approve`, { method: 'POST', body: JSON.stringify({ ids, action }) }),
+    },
+    meta: {
+      classifications: () => request<{ classifications: string[] }>(`/business/meta/classifications`),
+      readinessStatuses: () => request<{ readiness_statuses: string[] }>(`/business/meta/readiness-statuses`),
+      profileFields: () => request<{ profile_fields: string[] }>(`/business/meta/profile-fields`),
+    },
   },
 }

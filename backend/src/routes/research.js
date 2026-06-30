@@ -62,23 +62,37 @@ router.get('/draft', (req, res) => {
 
 router.put('/draft', (req, res) => {
   const db = getDb()
-  const { market_mode, criteria = {} } = req.body
+  const { market_mode, research_type, criteria = {} } = req.body
+  const storedCriteria = research_type ? { ...criteria, _research_type: research_type } : criteria
   db.prepare(`INSERT OR REPLACE INTO research_drafts (id, market_mode, criteria_json, updated_at) VALUES ('singleton', ?, ?, datetime('now'))`)
-    .run(market_mode || 'commercial', JSON.stringify(criteria))
+    .run(market_mode || 'commercial', JSON.stringify(storedCriteria))
   res.json({ success: true })
 })
 
 // Run demo research
 router.post('/run', (req, res) => {
   const db = getDb()
-  const { market_mode, criteria = {}, desired_count = 5 } = req.body
-  if (!market_mode) return res.status(400).json({ error: 'market_mode required' })
+  const { market_mode, research_type = 'target_discovery', criteria = {}, desired_count = 5 } = req.body
+  if (!market_mode && research_type !== 'ecosystem_signal') return res.status(400).json({ error: 'market_mode required' })
+
+  // Handle ecosystem signal generation separately
+  if (research_type === 'ecosystem_signal') {
+    const signals = generateDemoSignals(criteria, Math.min(parseInt(desired_count) || 3, 5))
+    return res.json({
+      demo_mode: true,
+      research_type,
+      disclaimer: 'Demo Research Mode: Signal results are simulated for workflow demonstration. Verify through official USDA, NRCS, and state agency sources.',
+      results: signals,
+      generated_at: new Date().toISOString(),
+    })
+  }
 
   // Generate demo results based on market mode and criteria
   const results = generateDemoResults(market_mode, criteria, Math.min(parseInt(desired_count) || 5, 10))
 
   res.json({
     demo_mode: true,
+    research_type,
     disclaimer: 'Demo Research Mode: Results are generated for workflow demonstration and have not been independently verified through live external sources.',
     market_mode,
     criteria,
@@ -196,6 +210,58 @@ function generateDemoResults(marketMode, criteria, count) {
   }
 
   return results
+}
+
+function generateDemoSignals(criteria, count) {
+  const pool = [
+    {
+      topic: 'USDA NRCS EQIP Conservation Stewardship Program — Signup Window Open',
+      signal_type: 'nrcs_program', state: criteria.state || 'OK', severity: 'medium', urgency: 'high',
+      counties: criteria.counties || [],
+      source: 'USDA NRCS State Office (Demo)',
+      funding_implication: 'EQIP payments available to eligible producers. Application deadline typically 60 days from signup announcement.',
+      marketing_implication: 'Contact eligible producers about technical assistance and program support services.',
+    },
+    {
+      topic: `Drought Monitor Update — ${criteria.state || 'Oklahoma'} Conditions Worsening`,
+      signal_type: 'drought_monitor', state: criteria.state || 'OK', severity: 'high', urgency: 'immediate',
+      counties: criteria.counties || [],
+      source: 'National Drought Monitor (Demo)',
+      operational_implication: 'Livestock producers face pasture and hay shortages. Emergency grazing programs may activate.',
+      funding_implication: 'FSA LFP and ELAP disaster programs likely triggered. Monitor FSA county office announcements.',
+    },
+    {
+      topic: 'State Agriculture Department — Rural Development Grant Announcement',
+      signal_type: 'state_program', state: criteria.state || 'OK', severity: 'medium', urgency: 'high',
+      counties: [],
+      source: 'State Dept of Agriculture (Demo)',
+      funding_implication: 'Rural development grants available for eligible agricultural businesses and cooperatives.',
+      contract_implication: 'Infrastructure and technology contracts expected to follow grant awards.',
+    },
+    {
+      topic: `${criteria.species || 'Cattle'} Market Price Alert — Above Year-Ago Levels`,
+      signal_type: 'market_price_alert', state: criteria.state || 'OK', severity: 'low', urgency: 'medium',
+      counties: [],
+      source: 'USDA AMS Market News (Demo)',
+      operational_implication: 'Favorable market conditions for livestock producers. Expansion considerations may be heightened.',
+      marketing_implication: 'Good timing for capability briefings to livestock producers and feedlots.',
+    },
+    {
+      topic: 'Pest & Disease Alert — Fall Armyworm Reports in Pasture Regions',
+      signal_type: 'pest_disease', state: criteria.state || 'OK', severity: 'high', urgency: 'high',
+      counties: criteria.counties || [],
+      source: 'OSU Extension Service (Demo)',
+      operational_implication: 'Bermudagrass and small grain pastures affected. Extension scouting alerts issued.',
+      marketing_implication: 'Outreach opportunity for monitoring and pest management services.',
+    },
+  ]
+
+  return pool.slice(0, count).map(s => ({
+    ...s,
+    id: `demo_signal_${uuidv4()}`,
+    is_demo: true,
+    data_classification: 'simulated',
+  }))
 }
 
 export default router
