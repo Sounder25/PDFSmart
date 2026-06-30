@@ -1,6 +1,10 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { getDb } from './db/schema.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 import brandRouter from './routes/brand.js'
 import campaignsRouter from './routes/campaigns.js'
 import contactsRouter from './routes/contacts.js'
@@ -30,6 +34,11 @@ app.use('/api/revenue', revenueRouter)
 app.use('/api/dashboard', dashboardRouter)
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
+
+// Serve frontend in production
+const DIST = path.join(__dirname, '..', '..', 'frontend', 'dist')
+app.use(express.static(DIST))
+app.get('*', (req, res) => res.sendFile(path.join(DIST, 'index.html')))
 
 app.use((err, req, res, next) => {
   console.error(err)
