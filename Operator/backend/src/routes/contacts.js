@@ -57,6 +57,8 @@ router.put('/:id', (req, res) => {
   if (notes !== undefined) { fields.push('notes = ?'); params.push(notes) }
   if (next_follow_up !== undefined) { fields.push('next_follow_up = ?'); params.push(next_follow_up) }
   if (last_contacted !== undefined) { fields.push('last_contacted = ?'); params.push(last_contacted) }
+  if (req.body.do_not_contact !== undefined) { fields.push('do_not_contact = ?'); params.push(req.body.do_not_contact ? 1 : 0) }
+  if (req.body.dnc_reason !== undefined) { fields.push('dnc_reason = ?'); params.push(req.body.dnc_reason) }
   params.push(req.params.id)
   db.prepare(`UPDATE contacts SET ${fields.join(', ')} WHERE id = ?`).run(...params)
   res.json(db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id))

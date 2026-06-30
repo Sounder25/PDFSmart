@@ -4,6 +4,66 @@ import { getDb } from '../db/schema.js'
 
 const r = Router()
 
+function getRules(db) {
+  const row = db.prepare(`SELECT * FROM agent_rules WHERE id='singleton'`).get()
+  return {
+    ...row,
+    eligible_statuses: JSON.parse(row.eligible_statuses || '[]'),
+    blocked_statuses: JSON.parse(row.blocked_statuses || '[]'),
+    cooldown_outcomes: JSON.parse(row.cooldown_outcomes || '[]'),
+    blocked_channels_by_type: JSON.parse(row.blocked_channels_by_type || '{}'),
+  }
+}
+
+function getEligibleContacts(db, rules) {
+  const today = new Date().toISOString().split('T')[0]
+  const allContacts = db.prepare(`SELECT * FROM contacts WHERE do_not_contact=0`).all()
+
+  const eligible = []
+  const excluded = []
+
+  for (const c of allContacts) {
+    // Blocked by status
+    if (rules.blocked_statuses.includes(c.status)) {
+      excluded.push({ ...c, exclusion_reason: `Status "${c.status}" is blocked` }); continue
+    }
+    // Not in eligible statuses
+    if (!rules.eligible_statuses.includes(c.status)) {
+      excluded.push({ ...c, exclusion_reason: `Status "${c.status}" not in eligible list` }); continue
+    }
+    // Require email
+    if (rules.require_email && !c.email) {
+      excluded.push({ ...c, exclusion_reason: 'No email address on file' }); continue
+    }
+    // Cooldown from recency
+    if (c.last_contacted) {
+      const daysSince = Math.floor((new Date(today) - new Date(c.last_contacted)) / 86400000)
+      if (daysSince < rules.min_days_between_outreach) {
+        excluded.push({ ...c, exclusion_reason: `Contacted ${daysSince}d ago — cooldown is ${rules.min_days_between_outreach}d` }); continue
+      }
+    }
+    // Cooldown from last outreach outcome
+    const lastOutreach = db.prepare(`
+      SELECT outcome, sent_at FROM outreach_log WHERE contact_id=? ORDER BY sent_at DESC LIMIT 1
+    `).get(c.id)
+    if (lastOutreach && rules.cooldown_outcomes.includes(lastOutreach.outcome)) {
+      const daysSince = Math.floor((new Date(today) - new Date(lastOutreach.sent_at.split('T')[0])) / 86400000)
+      const cooldown = lastOutreach.outcome === 'declined'
+        ? rules.cooldown_days_after_decline
+        : rules.cooldown_days_after_no_response
+      if (daysSince < cooldown) {
+        excluded.push({ ...c, exclusion_reason: `Last outcome was "${lastOutreach.outcome}" ${daysSince}d ago — cooldown is ${cooldown}d` }); continue
+      }
+    }
+    eligible.push(c)
+  }
+
+  const dnc = db.prepare(`SELECT * FROM contacts WHERE do_not_contact=1`).all()
+    .map(c => ({ ...c, exclusion_reason: `Do Not Contact${c.dnc_reason ? ': ' + c.dnc_reason : ''}` }))
+
+  return { eligible, excluded: [...dnc, ...excluded] }
+}
+
 // ── Context endpoint ─────────────────────────────────────────────────────────
 // Single call that orients an agent on wake-up: brand, campaigns, tasks, follow-ups
 r.get('/context', (req, res) => {
@@ -11,6 +71,8 @@ r.get('/context', (req, res) => {
   const today = new Date().toISOString().split('T')[0]
 
   const brand = db.prepare(`SELECT * FROM brand_profile WHERE id='singleton'`).get()
+  const rules = getRules(db)
+  const { eligible, excluded } = getEligibleContacts(db, rules)
 
   const campaigns = db.prepare(`
     SELECT c.*, cp.id AS plan_id, cp.summary AS plan_summary, cp.goal AS plan_goal, cp.strategy AS plan_strategy
@@ -65,6 +127,13 @@ r.get('/context', (req, res) => {
   res.json({
     retrieved_at: new Date().toISOString(),
     brand,
+    rules,
+    contacts: {
+      eligible_count: eligible.length,
+      eligible,
+      excluded_count: excluded.length,
+      excluded
+    },
     active_campaigns: campaigns,
     tasks: { overdue: overdue_tasks, pending: tasks.filter(t => !overdue_tasks.includes(t)) },
     follow_ups,
@@ -73,6 +142,47 @@ r.get('/context', (req, res) => {
     revenue_summary,
     pending_content
   })
+})
+
+// ── Rules ────────────────────────────────────────────────────────────────────
+r.get('/rules', (req, res) => res.json(getRules(getDb())))
+
+r.put('/rules', (req, res) => {
+  const db = getDb()
+  const { min_days_between_outreach, eligible_statuses, blocked_statuses, cooldown_outcomes,
+    cooldown_days_after_decline, cooldown_days_after_no_response, blocked_channels_by_type,
+    require_email, notes } = req.body
+  db.prepare(`
+    UPDATE agent_rules SET
+      min_days_between_outreach=COALESCE(?,min_days_between_outreach),
+      eligible_statuses=COALESCE(?,eligible_statuses),
+      blocked_statuses=COALESCE(?,blocked_statuses),
+      cooldown_outcomes=COALESCE(?,cooldown_outcomes),
+      cooldown_days_after_decline=COALESCE(?,cooldown_days_after_decline),
+      cooldown_days_after_no_response=COALESCE(?,cooldown_days_after_no_response),
+      blocked_channels_by_type=COALESCE(?,blocked_channels_by_type),
+      require_email=COALESCE(?,require_email),
+      notes=COALESCE(?,notes),
+      updated_at=datetime('now')
+    WHERE id='singleton'
+  `).run(
+    min_days_between_outreach ?? null,
+    eligible_statuses ? JSON.stringify(eligible_statuses) : null,
+    blocked_statuses ? JSON.stringify(blocked_statuses) : null,
+    cooldown_outcomes ? JSON.stringify(cooldown_outcomes) : null,
+    cooldown_days_after_decline ?? null,
+    cooldown_days_after_no_response ?? null,
+    blocked_channels_by_type ? JSON.stringify(blocked_channels_by_type) : null,
+    require_email !== undefined ? (require_email ? 1 : 0) : null,
+    notes ?? null
+  )
+  res.json(getRules(db))
+})
+
+// ── Eligible contacts (standalone endpoint) ───────────────────────────────────
+r.get('/eligible', (req, res) => {
+  const db = getDb()
+  res.json(getEligibleContacts(db, getRules(db)))
 })
 
 // ── Tasks ─────────────────────────────────────────────────────────────────────

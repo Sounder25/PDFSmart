@@ -102,6 +102,11 @@ export const api = {
       list: (params?: Record<string, string>) => get<AgentLogEntry[]>(`/agent/log${params ? qs(params) : ''}`),
       append: (data: Partial<AgentLogEntry>) => post<AgentLogEntry>('/agent/log', data),
     },
+    rules: {
+      get: () => get<AgentRules>('/agent/rules'),
+      update: (data: Partial<AgentRules>) => put<AgentRules>('/agent/rules', data),
+    },
+    eligible: () => get<{ eligible: EligibleContact[]; excluded: ExcludedContact[] }>('/agent/eligible'),
   },
 }
 
@@ -178,6 +183,26 @@ export interface RevenueEvent {
 }
 
 export interface RevenueListResponse { data: RevenueEvent[]; summary: { type: string; count: number; total: number; units: number }[]; grand_total: number }
+
+export interface AgentRules {
+  min_days_between_outreach: number
+  eligible_statuses: string[]
+  blocked_statuses: string[]
+  cooldown_outcomes: string[]
+  cooldown_days_after_decline: number
+  cooldown_days_after_no_response: number
+  require_email: number
+  notes?: string
+}
+
+export interface EligibleContact {
+  id: string; name: string; type: string; organization?: string; status: string
+  email?: string; last_contacted?: string
+}
+
+export interface ExcludedContact extends EligibleContact {
+  exclusion_reason: string
+}
 
 export interface AgentTask {
   id: string; title: string; description?: string; type: string

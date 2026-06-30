@@ -82,6 +82,8 @@ function initSchema() {
       last_contacted TEXT,
       next_follow_up TEXT,
       notes TEXT,
+      do_not_contact INTEGER NOT NULL DEFAULT 0,
+      dnc_reason TEXT,
       is_demo INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -215,6 +217,23 @@ function initSchema() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Agent outreach rules (singleton config)
+    CREATE TABLE IF NOT EXISTS agent_rules (
+      id TEXT PRIMARY KEY DEFAULT 'singleton',
+      min_days_between_outreach INTEGER NOT NULL DEFAULT 7,
+      eligible_statuses TEXT NOT NULL DEFAULT '["cold","warm","active"]',
+      blocked_statuses TEXT NOT NULL DEFAULT '["won","lost"]',
+      cooldown_outcomes TEXT NOT NULL DEFAULT '["declined","no_response"]',
+      cooldown_days_after_decline INTEGER NOT NULL DEFAULT 30,
+      cooldown_days_after_no_response INTEGER NOT NULL DEFAULT 14,
+      blocked_channels_by_type TEXT NOT NULL DEFAULT '{}',
+      require_email INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    INSERT OR IGNORE INTO agent_rules (id) VALUES ('singleton');
 
     -- Agent activity log (append-only)
     CREATE TABLE IF NOT EXISTS agent_log (
