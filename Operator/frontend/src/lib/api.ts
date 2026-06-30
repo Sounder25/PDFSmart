@@ -85,6 +85,24 @@ export const api = {
     update: (id: string, data: Partial<RevenueEvent>) => put<RevenueEvent>(`/revenue/${id}`, data),
     delete: (id: string) => del<{ success: boolean }>(`/revenue/${id}`),
   },
+
+  agent: {
+    context: () => get<Record<string, unknown>>('/agent/context'),
+    tasks: {
+      list: (params?: Record<string, string>) => get<AgentTask[]>(`/agent/tasks${params ? qs(params) : ''}`),
+      create: (data: Partial<AgentTask>) => post<AgentTask>('/agent/tasks', data),
+      update: (id: string, data: Partial<AgentTask>) => put<AgentTask>(`/agent/tasks/${id}`, data),
+      delete: (id: string) => del<{ success: boolean }>(`/agent/tasks/${id}`),
+    },
+    plan: {
+      get: (campaignId: string) => get<CampaignPlan | null>(`/agent/plan/${campaignId}`),
+      save: (campaignId: string, data: Partial<CampaignPlan>) => post<CampaignPlan>(`/agent/plan/${campaignId}`, data),
+    },
+    log: {
+      list: (params?: Record<string, string>) => get<AgentLogEntry[]>(`/agent/log${params ? qs(params) : ''}`),
+      append: (data: Partial<AgentLogEntry>) => post<AgentLogEntry>('/agent/log', data),
+    },
+  },
 }
 
 // Types
@@ -160,6 +178,37 @@ export interface RevenueEvent {
 }
 
 export interface RevenueListResponse { data: RevenueEvent[]; summary: { type: string; count: number; total: number; units: number }[]; grand_total: number }
+
+export interface AgentTask {
+  id: string; title: string; description?: string; type: string
+  assigned_to: string; priority: string; status: string
+  due_date?: string; campaign_id?: string; contact_id?: string; milestone_id?: string
+  result?: string; created_by: string; created_at: string; updated_at: string
+  campaign_name?: string; contact_name?: string
+}
+
+export interface CampaignMilestone {
+  id: string; phase_id: string; name: string; description?: string
+  due_date?: string; status: string; notes?: string; created_at: string
+}
+
+export interface CampaignPhase {
+  id: string; plan_id: string; name: string; description?: string
+  start_date?: string; end_date?: string; order_index: number; status: string
+  milestones: CampaignMilestone[]
+}
+
+export interface CampaignPlan {
+  id: string; campaign_id: string; summary?: string; goal?: string; strategy?: string
+  created_by: string; created_at: string; updated_at: string
+  phases: CampaignPhase[]
+}
+
+export interface AgentLogEntry {
+  id: string; agent_name: string; action: string; details?: string
+  campaign_id?: string; task_id?: string; created_at: string
+  campaign_name?: string
+}
 
 export interface DashboardData {
   brand: { company_name?: string; founder_name?: string; tagline?: string; mission?: string }

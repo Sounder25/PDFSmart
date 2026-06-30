@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 import {
   LayoutDashboard, Crosshair, Megaphone, Users, Send,
   FileText, Radio, TrendingUp, DollarSign, BarChart2,
-  ChevronRight, AlertCircle
+  ChevronRight, AlertCircle, Map
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +19,7 @@ const NAV = [
   { icon: TrendingUp, label: 'Investor Board', to: '/investors' },
   { icon: DollarSign, label: 'Revenue Board', to: '/revenue' },
   { icon: BarChart2, label: 'Analytics', to: '/analytics' },
+  { icon: Map, label: 'Mission Planner', to: '/planner' },
 ]
 
 export function Sidebar() {

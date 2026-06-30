@@ -10,6 +10,7 @@ import { Coverage } from '@/pages/Coverage'
 import { InvestorBoard } from '@/pages/InvestorBoard'
 import { Revenue } from '@/pages/Revenue'
 import { Analytics } from '@/pages/Analytics'
+import { MissionPlanner } from '@/pages/MissionPlanner'
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/investors" element={<InvestorBoard />} />
             <Route path="/revenue" element={<Revenue />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/planner" element={<MissionPlanner />} />
           </Routes>
         </div>
       </main>

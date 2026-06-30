@@ -160,6 +160,73 @@ function initSchema() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Campaign plans (one per campaign, written by human or agent)
+    CREATE TABLE IF NOT EXISTS campaign_plans (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+      summary TEXT,
+      goal TEXT,
+      strategy TEXT,
+      created_by TEXT NOT NULL DEFAULT 'human',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Phases within a plan
+    CREATE TABLE IF NOT EXISTS campaign_phases (
+      id TEXT PRIMARY KEY,
+      plan_id TEXT NOT NULL REFERENCES campaign_plans(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      description TEXT,
+      start_date TEXT,
+      end_date TEXT,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Milestones within a phase
+    CREATE TABLE IF NOT EXISTS campaign_milestones (
+      id TEXT PRIMARY KEY,
+      phase_id TEXT NOT NULL REFERENCES campaign_phases(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      description TEXT,
+      due_date TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Agent task queue
+    CREATE TABLE IF NOT EXISTS agent_tasks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      type TEXT NOT NULL DEFAULT 'general',
+      assigned_to TEXT NOT NULL DEFAULT 'human',
+      priority TEXT NOT NULL DEFAULT 'medium',
+      status TEXT NOT NULL DEFAULT 'pending',
+      due_date TEXT,
+      campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+      contact_id TEXT REFERENCES contacts(id) ON DELETE SET NULL,
+      milestone_id TEXT REFERENCES campaign_milestones(id) ON DELETE SET NULL,
+      result TEXT,
+      created_by TEXT NOT NULL DEFAULT 'human',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Agent activity log (append-only)
+    CREATE TABLE IF NOT EXISTS agent_log (
+      id TEXT PRIMARY KEY,
+      agent_name TEXT NOT NULL DEFAULT 'hermes',
+      action TEXT NOT NULL,
+      details TEXT,
+      campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+      task_id TEXT REFERENCES agent_tasks(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     -- Indexes
     CREATE INDEX IF NOT EXISTS idx_contacts_type ON contacts(type);
     CREATE INDEX IF NOT EXISTS idx_contacts_status ON contacts(status);
@@ -168,5 +235,9 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_coverage_contact ON coverage_log(contact_id);
     CREATE INDEX IF NOT EXISTS idx_investor_contact ON investor_pipeline(contact_id);
     CREATE INDEX IF NOT EXISTS idx_revenue_type ON revenue_events(type);
+    CREATE INDEX IF NOT EXISTS idx_tasks_status ON agent_tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_tasks_campaign ON agent_tasks(campaign_id);
+    CREATE INDEX IF NOT EXISTS idx_log_campaign ON agent_log(campaign_id);
+    CREATE INDEX IF NOT EXISTS idx_plan_campaign ON campaign_plans(campaign_id);
   `)
 }

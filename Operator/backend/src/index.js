@@ -14,6 +14,7 @@ import coverageRouter from './routes/coverage.js'
 import investorsRouter from './routes/investors.js'
 import revenueRouter from './routes/revenue.js'
 import dashboardRouter from './routes/dashboard.js'
+import agentRouter from './routes/agent.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -32,6 +33,7 @@ app.use('/api/coverage', coverageRouter)
 app.use('/api/investors', investorsRouter)
 app.use('/api/revenue', revenueRouter)
 app.use('/api/dashboard', dashboardRouter)
+app.use('/api/agent', agentRouter)
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
 
