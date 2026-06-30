@@ -47,7 +47,7 @@ function initSchema() {
     );
 
     -- Insert singleton if not exists
-    INSERT OR IGNORE INTO brand_profile (id, company_name, website) VALUES ('singleton', 'Sounder Solution', 'https://soundersolution.com');
+    INSERT OR IGNORE INTO brand_profile (id, company_name, website) VALUES ('singleton', 'Sounder Solutions', 'https://soundersolution.com');
 
     -- Campaigns
     CREATE TABLE IF NOT EXISTS campaigns (

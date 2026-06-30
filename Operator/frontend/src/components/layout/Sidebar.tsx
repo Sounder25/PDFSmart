@@ -40,7 +40,7 @@ export function Sidebar() {
           </div>
         </div>
         <div className="mt-2.5 text-[10px] text-slate-500 truncate">
-          {dash?.brand?.company_name || 'Sounder Solution'}
+          {dash?.brand?.company_name || 'Sounder Solutions'}
         </div>
       </div>
 
