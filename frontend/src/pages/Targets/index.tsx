@@ -309,20 +309,36 @@ export function TargetsPage() {
 }
 
 function AddTargetModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  const navigate = useNavigate()
   const [form, setForm] = useState({ market_mode: 'commercial', entity_type: 'company', name: '', primary_location: '', industry: '', estimated_value: '' })
   const [error, setError] = useState('')
   const [dupeWarning, setDupeWarning] = useState<{ id: string; name: string } | null>(null)
+  const [merging, setMerging] = useState(false)
+
+  const resetForm = () => {
+    setForm({ market_mode: 'commercial', entity_type: 'company', name: '', primary_location: '', industry: '', estimated_value: '' })
+    setDupeWarning(null)
+    setError('')
+    setMerging(false)
+  }
+
+  const buildPayload = (forceCreate = false) => ({
+    ...form,
+    market_mode: form.market_mode as import('@/types').MarketMode,
+    estimated_value: form.estimated_value ? Number(form.estimated_value) : undefined,
+    ...(forceCreate ? { force_create: true } : {}),
+  })
 
   const submit = async () => {
     setError('')
     setDupeWarning(null)
     if (!form.name.trim()) { setError('Name is required'); return }
     try {
-      await api.targets.create({ ...form, market_mode: form.market_mode as import('@/types').MarketMode, estimated_value: form.estimated_value ? Number(form.estimated_value) : undefined })
+      await api.targets.create(buildPayload())
       toast.success('Target created')
       onCreated()
       onClose()
-      setForm({ market_mode: 'commercial', entity_type: 'company', name: '', primary_location: '', industry: '', estimated_value: '' })
+      resetForm()
     } catch (e: unknown) {
       const err = e as { data?: { duplicate?: boolean; existing?: { id: string; name: string } }; message?: string }
       if (err.data?.duplicate) {
@@ -333,16 +349,55 @@ function AddTargetModal({ open, onClose, onCreated }: { open: boolean; onClose: 
     }
   }
 
+  const addSeparately = async () => {
+    setError('')
+    try {
+      await api.targets.create(buildPayload(true))
+      toast.success('Target created separately')
+      onCreated()
+      onClose()
+      resetForm()
+    } catch (e: unknown) {
+      const err = e as { message?: string }
+      setError(err.message || 'Failed to create target')
+    }
+  }
+
+  const mergeIntoExisting = async () => {
+    if (!dupeWarning) return
+    setMerging(true)
+    setError('')
+    try {
+      const created = (await api.targets.create(buildPayload(true))) as unknown as { id: string }
+      await api.targets.merge(dupeWarning.id, created.id)
+      toast.success('Research merged into existing target')
+      onCreated()
+      onClose()
+      resetForm()
+      navigate(`/targets/${dupeWarning.id}`)
+    } catch {
+      toast.error('Merge failed')
+      setMerging(false)
+    }
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="Add Target" size="md">
       {dupeWarning && (
         <div className="mb-3 bg-amber-950/40 border border-amber-700/40 rounded-md p-3">
-          <p className="text-xs text-amber-300 mb-2"><AlertTriangle className="w-3.5 h-3.5 inline mr-1" />Possible duplicate detected: <strong>{dupeWarning.name}</strong></p>
-          <div className="flex gap-2">
-            <button className="btn-secondary text-xs py-1" onClick={() => { window.open(`/targets/${dupeWarning.id}`, '_blank') }}>View Existing</button>
-            <button className="btn-primary text-xs py-1" onClick={() => { setDupeWarning(null); /* force create: skip dupe check */ toast.info('Add separately not yet implemented — use View Existing') }}>Add Separately</button>
+          <p className="text-xs text-amber-300 mb-2">
+            <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
+            Possible duplicate detected: <strong>{dupeWarning.name}</strong>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-secondary text-xs py-1" onClick={() => window.open(`/targets/${dupeWarning.id}`, '_blank')}>View Existing</button>
+            <button className="btn-primary text-xs py-1" onClick={mergeIntoExisting} disabled={merging}>
+              {merging ? 'Merging…' : 'Merge Research'}
+            </button>
+            <button className="btn-secondary text-xs py-1" onClick={addSeparately}>Add Separately</button>
             <button className="btn-ghost text-xs py-1" onClick={() => setDupeWarning(null)}>Cancel</button>
           </div>
+          <p className="text-[10px] text-slate-500 mt-2">Merge Research will combine this record's data into the existing target and navigate to it.</p>
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">

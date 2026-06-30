@@ -20,14 +20,19 @@ export const api = {
       return request<import('../types').PaginatedResponse<import('../types').TargetEntity>>(`/targets${qs}`)
     },
     get: (id: string) => request<import('../types').TargetEntity>(`/targets/${id}`),
-    create: (data: Partial<import('../types').TargetEntity>) => request(`/targets`, { method: 'POST', body: JSON.stringify(data) }),
+    create: (data: Partial<import('../types').TargetEntity> & { force_create?: boolean }) => request(`/targets`, { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<import('../types').TargetEntity>) => request(`/targets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request(`/targets/${id}`, { method: 'DELETE' }),
     bulkDelete: (ids: string[]) => request(`/targets/bulk/delete`, { method: 'POST', body: JSON.stringify({ ids }) }),
     bulkStatus: (ids: string[], status: string) => request(`/targets/bulk/status`, { method: 'POST', body: JSON.stringify({ ids, status }) }),
     bulkTags: (ids: string[], tag_ids: string[], action: 'add' | 'remove' = 'add') =>
       request(`/targets/bulk/tags`, { method: 'POST', body: JSON.stringify({ ids, tag_ids, action }) }),
-    exportCsv: () => fetch(`${BASE}/targets/export/csv`).then(r => r.blob()),
+    merge: (destId: string, sourceId: string) =>
+      request(`/targets/merge/${destId}/from/${sourceId}`, { method: 'POST' }),
+    exportCsv: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetch(`${BASE}/targets/export/csv${qs}`).then(r => r.blob())
+    },
   },
 
   // Contacts

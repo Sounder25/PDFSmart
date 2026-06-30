@@ -86,9 +86,10 @@ export function calculateScore(targetId, marketMode, dimensions) {
 
   dimensions.forEach(d => {
     const modelDim = model.find(m => m.key === d.key || m.name === d.dimension_name)
-    dimStmt.run(uuidv4(), recId, d.dimension_name || d.key, d.points_earned || 0,
-      d.maximum_points || modelDim?.max || 10,
-      d.explanation || '', d.confidence_level || 'medium', d.missing_data_penalty || 0)
+    const maxPts = d.maximum_points || modelDim?.max || 10
+    const earned = Math.min(maxPts, Math.max(0, d.points_earned || 0)) // enforce 0 ≤ earned ≤ max
+    dimStmt.run(uuidv4(), recId, d.dimension_name || d.key, earned,
+      maxPts, d.explanation || '', d.confidence_level || 'medium', d.missing_data_penalty || 0)
   })
 
   return { id: recId, total_score: total, score_classification: classification }

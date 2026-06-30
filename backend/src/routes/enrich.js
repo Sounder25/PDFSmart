@@ -156,51 +156,72 @@ router.post('/accept/:targetId', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `)
 
+  // Confidence/classification ranking — lower index = higher confidence
   const FIELD_CONFIDENCE_ORDER = ['verified', 'sourced', 'user_provided', 'inferred', 'simulated', 'unknown']
+  const confidenceRank = (c) => { const i = FIELD_CONFIDENCE_ORDER.indexOf(c); return i === -1 ? 99 : i }
 
-  for (const proposal of accepted) {
-    const { field, old_value, new_value, classification, old_confidence, new_confidence } = proposal
+  // SAFE fields that can be updated without protection checks (never exist as verified at field level)
+  const SAFE_FIELDS = new Set(['confidence_level', 'verification_status', 'industry', 'estimated_value', 'primary_location', 'description', 'website', 'domain'])
 
-    if (field === 'confidence_level' || field === 'verification_status' || field === 'industry' || field === 'estimated_value' || field === 'primary_location') {
-      // Protection: never overwrite verified/sourced with lower-confidence data
-      const currentConfidenceRank = FIELD_CONFIDENCE_ORDER.indexOf(target.confidence_level)
-      const newConfidenceRank = FIELD_CONFIDENCE_ORDER.indexOf(classification)
-      if (currentConfidenceRank < newConfidenceRank && target.verification_status === 'verified') {
-        historyStmt.run(uuidv4(), target.id, field, old_value, new_value, old_confidence, new_confidence, classification, 'rejected')
+  const applyFn = db.transaction(() => {
+    const appliedCount = { accepted: 0, blocked: 0 }
+
+    for (const proposal of accepted) {
+      const { field, old_value, new_value, classification, old_confidence, new_confidence } = proposal
+
+      // Field-level protection: look up the most recent accepted change to this field
+      const lastAccepted = db.prepare(`
+        SELECT classification, new_confidence FROM enrichment_history
+        WHERE target_entity_id = ? AND field_name = ? AND action = 'accepted'
+        ORDER BY enriched_at DESC LIMIT 1
+      `).get(target.id, field)
+
+      // Determine effective protection level for this field
+      // If this field was previously accepted with high confidence, protect it
+      const fieldProtectionRank = lastAccepted
+        ? Math.min(confidenceRank(lastAccepted.classification), confidenceRank(lastAccepted.new_confidence || 'unknown'))
+        : confidenceRank(target.verification_status === 'verified' ? 'verified' : target.confidence_level)
+
+      const proposalRank = confidenceRank(classification)
+
+      // Block: proposed classification is LOWER confidence than existing field classification
+      if (proposalRank > fieldProtectionRank && fieldProtectionRank <= confidenceRank('sourced')) {
+        historyStmt.run(uuidv4(), target.id, field, String(old_value ?? ''), String(new_value ?? ''), old_confidence || null, new_confidence || null, classification || 'inferred', 'blocked')
+        appliedCount.blocked++
         continue
       }
 
-      if (field !== 'confidence_level' && field !== 'verification_status') {
+      // Apply the update if it's a known safe field
+      if (SAFE_FIELDS.has(field)) {
         db.prepare(`UPDATE target_entities SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`).run(new_value, target.id)
-      } else {
-        db.prepare(`UPDATE target_entities SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`).run(new_value, target.id)
+      }
+
+      historyStmt.run(uuidv4(), target.id, field, String(old_value ?? ''), String(new_value ?? ''), old_confidence || null, new_confidence || null, classification || 'inferred', 'accepted')
+      appliedCount.accepted++
+    }
+
+    for (const proposal of rejected) {
+      historyStmt.run(uuidv4(), target.id, proposal.field, String(proposal.old_value ?? ''), String(proposal.new_value ?? ''), proposal.old_confidence || null, proposal.new_confidence || null, proposal.classification || 'inferred', 'rejected')
+    }
+
+    if (claim_proposals.length) {
+      const claimStmt = db.prepare(`INSERT INTO research_claims (id, target_entity_id, claim_type, claim_text, classification, confidence_level) VALUES (?, ?, ?, ?, ?, ?)`)
+      for (const cp of claim_proposals) {
+        claimStmt.run(uuidv4(), target.id, cp.type, cp.text, cp.classification || 'inferred', cp.confidence || 'medium')
       }
     }
 
-    historyStmt.run(uuidv4(), target.id, field, String(old_value ?? ''), String(new_value ?? ''), old_confidence || null, new_confidence || null, classification || 'inferred', 'accepted')
-  }
+    db.prepare(`UPDATE target_entities SET last_enriched_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`).run(target.id)
 
-  for (const proposal of rejected) {
-    historyStmt.run(uuidv4(), target.id, proposal.field, String(proposal.old_value ?? ''), String(proposal.new_value ?? ''), proposal.old_confidence || null, proposal.new_confidence || null, proposal.classification || 'inferred', 'rejected')
-  }
+    db.prepare(`INSERT INTO activities (id, target_entity_id, activity_type, description, outcome) VALUES (?, ?, 'enrichment', ?, ?)`)
+      .run(uuidv4(), target.id, `Enrichment completed: ${appliedCount.accepted} changes applied, ${appliedCount.blocked} blocked by data protection, ${rejected.length} manually rejected`, `${appliedCount.accepted} applied`)
 
-  // Accept claim proposals
-  if (claim_proposals.length) {
-    const claimStmt = db.prepare(`INSERT INTO research_claims (id, target_entity_id, claim_type, claim_text, classification, confidence_level) VALUES (?, ?, ?, ?, ?, ?)`)
-    for (const cp of claim_proposals) {
-      claimStmt.run(uuidv4(), target.id, cp.type, cp.text, cp.classification || 'inferred', cp.confidence || 'medium')
-    }
-  }
+    return appliedCount
+  })
 
-  // Update enrichment timestamp and recalculate score flag
-  db.prepare(`UPDATE target_entities SET last_enriched_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`).run(target.id)
-
-  // Log activity
-  db.prepare(`INSERT INTO activities (id, target_entity_id, activity_type, description, outcome) VALUES (?, ?, 'enrichment', ?, ?)`)
-    .run(uuidv4(), target.id, `Enrichment completed: ${accepted.length} changes accepted, ${rejected.length} rejected`, `${accepted.length} accepted`)
-
+  const counts = applyFn()
   const updated = db.prepare('SELECT * FROM target_entities WHERE id = ?').get(target.id)
-  res.json({ success: true, accepted: accepted.length, rejected: rejected.length, target: updated })
+  res.json({ success: true, accepted: counts.accepted, blocked: counts.blocked, rejected: rejected.length, target: updated })
 })
 
 // Enrichment history for a target
