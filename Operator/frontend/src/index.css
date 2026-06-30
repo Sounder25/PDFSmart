@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #0a0f1a;
+  --bg-card: #111827;
+  --bg-card-hover: #162032;
+  --border: #1f2d40;
+  --border-light: #263548;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --brand: #e8920f;
+  --brand-dark: #c97b0c;
+  --brand-glow: rgba(232, 146, 15, 0.15);
+  --teal: #14b8a6;
+  --green: #22c55e;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .op-card {
+    @apply bg-[#111827] border border-[#1f2d40] rounded-xl;
+  }
+  .op-card-hover {
+    @apply op-card hover:border-[#263548] hover:bg-[#162032] transition-colors cursor-pointer;
+  }
+  .op-input {
+    @apply w-full bg-[#0d1520] border border-[#1f2d40] rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400/30 transition-colors;
+  }
+  .op-label {
+    @apply block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5;
+  }
+  .btn-primary {
+    @apply flex items-center gap-1.5 bg-brand-500 hover:bg-brand-400 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply flex items-center gap-1.5 bg-[#1a2740] hover:bg-[#1e2f4a] border border-[#263548] text-slate-300 font-medium text-sm px-3 py-2 rounded-lg transition-colors;
+  }
+  .btn-ghost {
+    @apply flex items-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/5 font-medium text-sm px-2 py-1.5 rounded-lg transition-colors;
+  }
+  .btn-danger {
+    @apply flex items-center gap-1.5 bg-red-900/20 hover:bg-red-900/40 border border-red-800/40 text-red-400 font-medium text-sm px-3 py-2 rounded-lg transition-colors;
+  }
+  .status-badge {
+    @apply inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border;
+  }
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1f2d40; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #263548; }
